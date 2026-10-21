@@ -86,7 +86,7 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const today=()=>new Date().toISOString().slice(0,10);
 const FY='01/04/2026 to 31/03/2027';
 // ---------- data layer ----------
-let MODE='demo', DB=null, AUTH=null, FB=null;
+let MODE='live', DB=null, AUTH=null, FB=null;
 let D={leads:[],services:[],customers:[],payments:[]};           // working data (demo or live-mirrored)
 let ctr={lead:1000,svc:100};
 const SVC_SEED=[['GST registration',999,899],['PAN',499,449],['Export Import Code (IEC)',1499,1349],['Company registration',9999,8999],['Trademark',6499,5849],['FSSAI (food license)',999,899],['ISO certificate',4999,4499],['Digital Signature (DSC)',1999,1799],['Income Tax return',999,899],['GST return filing',999,899],['Trade license',1999,1799],['Shop & Establishment registration',999,899],['EPF registration',999,899],['ESI registration',999,899],['Professional Tax registration',999,899],['Partnership firm registration',2999,2699],['LLP registration',7999,7199],['Copyright',4999,4499],['TAN application',499,449],['Startup India (DPIIT)',1999,1799],['WhatsApp Automation',4999,4499],['AI Chat Agent',0,0],['AI Voice and Calling Agent',0,0],['AI Video and Reels Creation',0,0],['Business Website',0,0],['Management Software',0,0],['Android App',0,0],['GST and HSN Tools Setup',0,0]];
