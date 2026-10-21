@@ -205,6 +205,8 @@ html[lang=hi] h1,html[lang=bn] h1,html[lang=hi] h2,html[lang=bn] h2{font-family:
   <label data-i18n="m_phone">Phone (WhatsApp) *</label><input id="mPhone" maxlength="15" inputmode="tel" autocomplete="tel">
   <label data-i18n="m_email">Email *</label><input id="mEmail" type="email" maxlength="120" autocomplete="email">
   <div class="merr" id="mErr"></div>
+  <button class="btn fill" id="mPayU" disabled style="width:100%;margin-top:10px;opacity:.55;cursor:not-allowed">Pay 30% advance <span id="mPayUAmt"></span> online (PayU) - Coming soon</button>
+  <div style="font-size:11.5px;color:var(--mute);margin-top:4px;text-align:center" id="mPayUNote"></div>
   <button class="btn fill" id="mPay" style="width:100%;margin-top:10px">Enquire on WhatsApp</button>
   <button class="btn ghosty" id="mPay30" style="width:100%;margin-top:8px">Ask for 30% advance option</button>
   <div class="mnote">Online payment is coming soon. Choose an option and we open WhatsApp with your details - just press send. We confirm your service and share payment options there: full fee with 10% off, or 30% advance and the rest before delivery. Government fees at actuals where applicable.</div>
@@ -290,10 +292,16 @@ window.openPay = function(dispName){
  const svc = (window.SVCLIST||[]).find(s => (PAYKEY[s[0]]||s[0]) === key);
  $('mGov').textContent = svc && svc[2] ? svc[2] : '';
  $('mErr').textContent = '';
+ const adv30 = Math.round(p[0] * 0.3);
+ const advGst = Math.round(adv30 * 0.18);
+ const bal = p[1] - adv30;
+ const balGst = Math.round(bal * 0.18);
+ $('mPayUAmt').textContent = '\u20b9' + (adv30 + advGst).toLocaleString('en-IN');
+ $('mPayUNote').textContent = 'Advance \u20b9' + adv30.toLocaleString('en-IN') + ' + 18% GST \u20b9' + advGst.toLocaleString('en-IN') + '. Balance \u20b9' + (bal + balGst).toLocaleString('en-IN') + ' (\u20b9' + bal.toLocaleString('en-IN') + ' + GST) before delivery. Online payment opens once PayU goes live.';
  $('mPay').disabled = false;
  $('mPay').textContent = 'Book full ₹' + p[1].toLocaleString('en-IN') + ' (10% off) - enquire on WhatsApp';
  const adv = Math.round(p[0] * 0.3);
- $('mPay30').textContent = '30% advance ₹' + adv.toLocaleString('en-IN') + ' - enquire on WhatsApp';
+ $('mPay30').textContent = '30% advance ₹' + adv.toLocaleString('en-IN') + ' + GST - enquire on WhatsApp';
  $('mPay30').disabled = false;
  $('payModal').classList.add('open');
 };
