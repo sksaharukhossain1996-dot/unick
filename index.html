@@ -158,7 +158,7 @@ html[lang=hi] h1,html[lang=bn] h1,html[lang=hi] h2,html[lang=bn] h2{font-family:
 </div></section>
 
 <section id="services"><div class="wrap">
-<div class="sec-h"><div class="eyebrow" style="color:var(--gold)" data-i18n="svc_eyebrow">Registration and compliance</div><h2 data-i18n="svc_h2">20 services, one fixed fee each</h2></div>
+<div class="sec-h"><div class="eyebrow" style="color:var(--gold)" data-i18n="svc_eyebrow">All services</div><h2 data-i18n="svc_h2">28 services - fixed fee or a clear quote first</h2></div>
 <div class="grid g3" id="svcgrid"></div>
 <div class="note" style="margin-top:22px" data-i18n="svc_note"><b>Free on official portals - we do not charge for these:</b> UDYAM/MSME registration (udyamregistration.gov.in), GeM seller registration (gem.gov.in), and barcodes directly from GS1 India (gs1india.org).</div>
 </div></section>
@@ -223,6 +223,14 @@ WhatsApp +91 86605 80564 - ecommerceunickdigital@gmail.com<br>
 
 <script>
 window.SVCLIST=[
+["WhatsApp Automation",0,"Auto-reply, product answers and lead capture on your WhatsApp - quote on request","Automation and AI"],
+["AI Chat Agent (website + WhatsApp)",0,"AI assistant answers customers on your site and WhatsApp - quote on request","Automation and AI"],
+["AI Voice and Calling Agent",0,"AI agent makes and answers calls for your business - quote on request","Automation and AI"],
+["AI Video and Reels Creation",0,"Product videos and reels made with AI - quote on request","Automation and AI"],
+["Business Website (design + hosting)",0,"Modern website for your business, hosted - quote on request","Digital products and software"],
+["Management Software (billing, stock, staff)",0,"Classic desktop + mobile software for your business - quote on request","Digital products and software"],
+["Android App (APK)",0,"Your own Android app - quote on request","Digital products and software"],
+["GST and HSN Tools Setup",0,"GST invoice and HSN tools set up for your business - quote on request","Digital products and software"],
 ["GST registration",999,"Government fee 0","Tax"],
 ["PAN",499,"Government fee 0-107 by route","Tax"],
 ["TAN application",499,"Government fee 77","Tax"],
@@ -244,19 +252,19 @@ window.SVCLIST=[
 ["Copyright",4999,"Government fee 2,000","IP and quality"],
 ["ISO certificate",4999,"Certification body cost","IP and quality"]];
 var SVC = window.SVCLIST;
-var ICONS={"Tax":"🧾","Setup":"🏢","Local and labour":"📋","IP and quality":"™️"};
+var ICONS={"Tax":"🧾","Setup":"🏢","Local and labour":"📋","IP and quality":"™️","Automation and AI":"🤖","Digital products and software":"💻"};
 (function(){
  var g="",out="",sel=document.getElementById("svcsel");
  for(var i=0;i<SVC.length;i++){var s=SVC[i];
   if(s[3]!==g){g=s[3];out+='<div class="grp">'+g+'</div>';}
-  out+='<div class="card"><div class="ic">'+(ICONS[s[3]]||"📄")+'</div><h3>'+s[0]+'</h3>'+(s[2]?'<p>'+s[2]+'</p>':'')+'<div class="fee">₹'+s[1].toLocaleString("en-IN")+'<small>UNICK fee</small></div><button class="paybtn" onclick="openPay(\''+s[0].replace(/'/g,"")+'\')">Book ₹'+(Math.round(s[1]*0.9)).toLocaleString("en-IN")+' <small>(10% off)</small></button></div>';
+  out+='<div class="card"><div class="ic">'+(ICONS[s[3]]||"📄")+'</div><h3>'+s[0]+'</h3>'+(s[2]?'<p>'+s[2]+'</p>':'')+(s[1]?'<div class="fee">₹'+s[1].toLocaleString("en-IN")+'<small>UNICK fee</small></div><button class="paybtn" onclick="openPay(\''+s[0].replace(/'/g,"")+'\')">Book ₹'+(Math.round(s[1]*0.9)).toLocaleString("en-IN")+' <small>(10% off)</small></button>':'<div class="fee">Quote on request<small>UNICK fee</small></div><a class="paybtn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/918660580564?text='+encodeURIComponent('Hi, I want a quote for: '+s[0])+'">Enquire on WhatsApp</a>')+'</div>';
   var o=document.createElement("option");o.value=i;o.textContent=s[0];sel.appendChild(o);
  }
  document.getElementById("svcgrid").innerHTML=out;
  function fee(){var s=SVC[+sel.value];
-  document.getElementById("feeout").textContent="₹"+s[1].toLocaleString("en-IN");
+  document.getElementById("feeout").textContent=s[1]?"₹"+s[1].toLocaleString("en-IN"):"Quote on request";
   document.getElementById("feeinfo").textContent=s[2]?s[2]:"No separate government fee";
-  document.getElementById("feewa").href="https://wa.me/918660580564?text="+encodeURIComponent("Hi, I want to know more about: "+s[0]+" (fee ₹"+s[1].toLocaleString("en-IN")+")");
+  document.getElementById("feewa").href="https://wa.me/918660580564?text="+encodeURIComponent("Hi, I want to know more about: "+s[0]+(s[1]?" (fee ₹"+s[1].toLocaleString("en-IN")+")":""));
  }
  sel.addEventListener("input",fee);fee();
 })();
@@ -474,4 +482,4 @@ document.getElementById('payelClose').onclick = () => { $p.classList.remove('ope
 </script>
 
 </body>
-</html>
+                                                                                      </html>
