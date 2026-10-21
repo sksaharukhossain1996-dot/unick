@@ -265,7 +265,7 @@ var ICONS={"Tax":"🧾","Setup":"🏢","Local and labour":"📋","IP and quality
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js';
 import { getFirestore, collection, doc, setDoc } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js';
-const firebaseConfig = { apiKey: 'AIzaSyB6W4VpjemO1aI', authDomain: 'udecs-store.firebaseapp.com', projectId: 'udecs-store', appId: '1:859203239571:web:e541cc2e68f880efa41766' };
+const firebaseConfig = { apiKey: 'AIzaSyANRNCASxjGE-IZSLdCws_6W4VpjemO1aI', authDomain: 'udecs-store.firebaseapp.com', projectId: 'udecs-store', appId: '1:859203239571:web:e541cc2e68f880efa41766' };
 const db = getFirestore(initializeApp(firebaseConfig, 'unick-site'));
 const WORKER = 'https://udecs-services-payu.sksaharukhossain1996.workers.dev';
 const PAY = { 'GST registration': [999, 899], 'PAN': [499, 449], 'Export Import Code (IEC)': [1499, 1349], 'Company registration': [9999, 8999], 'Trademark': [6499, 5849], 'FSSAI (food license)': [999, 899], 'ISO certificate': [4999, 4499], 'Digital Signature (DSC)': [1999, 1799], 'Income Tax return': [999, 899], 'GST return filing': [999, 899], 'Trade license': [1999, 1799], 'Shop & Establishment registration': [999, 899], 'EPF registration': [999, 899], 'ESI registration': [999, 899], 'Professional Tax registration': [999, 899], 'Partnership firm registration': [2999, 2699], 'LLP registration': [7999, 7199], 'Copyright': [4999, 4499], 'TAN application': [499, 449], 'Startup India (DPIIT)': [1999, 1799] };
@@ -388,7 +388,7 @@ const $b = document.getElementById('payelBtn'), $p = document.getElementById('pa
 let opened = false, st = { step: null, svc: null, lead: {} }, busy = false;
 $t.placeholder = T('placeholder');
 let db = null;
-function getDb(){ if (!db) { try { db = getFirestore(initializeApp({ apiKey: 'AIzaSyB6W4VpjemO1aI', authDomain: 'udecs-store.firebaseapp.com', projectId: 'udecs-store', appId: '1:859203239571:web:e541cc2e68f880efa41766' }, 'unick-payel')); } catch(e){} } return db; }
+function getDb(){ if (!db) { try { db = getFirestore(initializeApp({ apiKey: 'AIzaSyANRNCASxjGE-IZSLdCws_6W4VpjemO1aI', authDomain: 'udecs-store.firebaseapp.com', projectId: 'udecs-store', appId: '1:859203239571:web:e541cc2e68f880efa41766' }, 'unick-payel')); } catch(e){} } return db; }
 function esc(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function fmt(s){ return esc(s).replace(/\*([^*]+)\*/g, '<b>$1</b>'); }
 function addMsg(text, who){ const d = document.createElement('div'); d.className = 'm ' + who; d.innerHTML = who === 'p' ? fmt(text) : esc(text); $m.appendChild(d); $m.scrollTop = $m.scrollHeight; return d; }
