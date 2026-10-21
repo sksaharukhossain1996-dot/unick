@@ -89,7 +89,7 @@ const FY='01/04/2026 to 31/03/2027';
 let MODE='demo', DB=null, AUTH=null, FB=null;
 let D={leads:[],services:[],customers:[],payments:[]};           // working data (demo or live-mirrored)
 let ctr={lead:1000,svc:100};
-const SVC_SEED=[['GST registration',999,899],['PAN',499,449],['Export Import Code (IEC)',1499,1349],['Company registration',9999,8999],['Trademark',6499,5849],['FSSAI (food license)',999,899],['ISO certificate',4999,4499],['Digital Signature (DSC)',1999,1799],['Income Tax return',999,899],['GST return filing',999,899],['Trade license',1999,1799],['Shop & Establishment registration',999,899],['EPF registration',999,899],['ESI registration',999,899],['Professional Tax registration',999,899],['Partnership firm registration',2999,2699],['LLP registration',7999,7199],['Copyright',4999,4499],['TAN application',499,449],['Startup India (DPIIT)',1999,1799]];
+const SVC_SEED=[['GST registration',999,899],['PAN',499,449],['Export Import Code (IEC)',1499,1349],['Company registration',9999,8999],['Trademark',6499,5849],['FSSAI (food license)',999,899],['ISO certificate',4999,4499],['Digital Signature (DSC)',1999,1799],['Income Tax return',999,899],['GST return filing',999,899],['Trade license',1999,1799],['Shop & Establishment registration',999,899],['EPF registration',999,899],['ESI registration',999,899],['Professional Tax registration',999,899],['Partnership firm registration',2999,2699],['LLP registration',7999,7199],['Copyright',4999,4499],['TAN application',499,449],['Startup India (DPIIT)',1999,1799],['WhatsApp Automation',0,0],['AI Chat Agent',0,0],['AI Voice and Calling Agent',0,0],['AI Video and Reels Creation',0,0],['Business Website',0,0],['Management Software',0,0],['Android App',0,0],['GST and HSN Tools Setup',0,0]];
 function demoData(){D.leads=[
  {id:'d1',leadNo:'UL-1001',name:'Rahul Sharma',phone:'+91 98300 11111',email:'rahul.s@gmail.com',requestedService:'GST registration',paymentChoice:'full_enquiry',status:'New leads',followUp:today(),quotedAmount:899,receivedAmount:0,paymentStatus:'Not paid',note:'',source:'unick_site',createdAt:new Date().toISOString()},
  {id:'d2',leadNo:'UL-1002',name:'Priya Verma',phone:'+91 98300 22222',email:'priya.v@yahoo.in',requestedService:'Trademark',paymentChoice:'advance_30_percent_enquiry',status:'Contacted',followUp:today(),quotedAmount:1755,receivedAmount:1755,paymentStatus:'Advance received',note:'Wants logo + wordmark both',source:'unick_site',createdAt:new Date(Date.now()-864e5).toISOString()},
@@ -235,7 +235,7 @@ return`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b><br>Classic Managem
 +g('Reports',[['📊','Leads by Status','rbs'],['📈','Enquiries by Service','rbsv'],['💵','Payments Summary','rps']])
 +g('Data',[['💾','Backup data','backup'],['⬆','Restore backup','restore']])}
 // ---------- seed (live, on explicit click) ----------
-async function seedServices(){if(MODE=='demo')return alert('Demo mode - services already loaded.');if(!confirm('Add the 20 website services with current fees to the dashboard? Do this once.'))return;
+async function seedServices(){if(MODE=='demo')return alert('Demo mode - services already loaded.');if(!confirm('Add the 28 website services with current fees to the dashboard? Do this once.'))return;
 try{for(const s of SVC_SEED){const no=await nextNo('svc');await FB.addDoc(FB.collection(DB,'unickServices'),{svcNo:no,name:s[0],full:s[1],offer:s[2],active:'Yes'})}alert('Services added.')}catch(x){alert('Seed failed: '+x.message)}}
 // ---------- menu ----------
 const MENU=[['File',[['Backup data','backup'],['Restore data','restore'],['Print','print']]],['Sales',[['Leads (Website Enquiries)','leads'],['Customers','customers'],['Services & Fees','services'],['Payment Records','payments'],['Payments & Enquiries','pay'],['Trash','trash']]],['Reports',[['Leads by Status','rbs'],['Enquiries by Service','rbsv'],['Payments Summary','rps']]],['Window',[['Home','home'],['Close all','closeall']]],['Help',[['About','about']]]];
@@ -258,7 +258,7 @@ const app=a.initializeApp({apiKey:'AIzaSyANRNCASxjGE-IZSLdCws_6W4VpjemO1aI',auth
 FB={collection:f.collection,doc:f.doc,setDoc:f.setDoc,addDoc:f.addDoc,updateDoc:f.updateDoc,deleteDoc:f.deleteDoc,onSnapshot:f.onSnapshot,runTransaction:f.runTransaction};DB=f.getFirestore(app);AUTH=au.getAuth(app);FB.signIn=au.signInWithEmailAndPassword}
 await FB.signIn(AUTH,em,pw);MODE='live';$('#w-login')&&$('#w-login').remove();
 FB.onSnapshot(FB.collection(DB,'serviceLeads'),s=>{D.leads=s.docs.map(d=>({id:d.id,...d.data()}));all()});
-FB.onSnapshot(FB.collection(DB,'unickServices'),s=>{D.services=s.docs.map(d=>({id:d.id,...d.data()}));if(!s.size)setTimeout(()=>{if(confirm('No services in dashboard yet. Add the 20 website services now?'))seedServices()},600);all()});
+FB.onSnapshot(FB.collection(DB,'unickServices'),s=>{D.services=s.docs.map(d=>({id:d.id,...d.data()}));if(!s.size)setTimeout(()=>{if(confirm('No services in dashboard yet. Add the 28 website services now?'))seedServices()},600);all()});
 FB.onSnapshot(FB.collection(DB,'unickCustomers'),s=>{D.customers=s.docs.map(d=>({id:d.id,...d.data()}));all()});
 FB.onSnapshot(FB.collection(DB,'unickPayments'),s=>{D.payments=s.docs.map(d=>({id:d.id,...d.data()}));all()});
 run('home')}catch(x){$('#lerr').textContent=x.message}}
