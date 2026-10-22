@@ -1,0 +1,11 @@
+{
+ "name": "UNICK Staff",
+ "short_name": "UNICK Staff",
+ "start_url": "staff.html?mode=app",
+ "display": "standalone",
+ "background_color": "#0e1a2e",
+ "theme_color": "#c9a45c",
+ "icons": [
+  { "src": "unick-logo.png", "sizes": "640x217", "type": "image/png", "purpose": "any" }
+ ]
+}
