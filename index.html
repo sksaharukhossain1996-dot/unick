@@ -234,6 +234,7 @@ window.SVCLIST=[
 ["Android App (APK)",0,"Your own Android app - quote on request","Digital products and software"],
 ["GST and HSN Tools Setup",0,"GST invoice and HSN tools set up for your business - quote on request","Digital products and software"],
 ["GST registration",1299,"Government fee 0","Tax"],
+["GST filing + Software Panel",0,"Monthly GST filing plus your own software panel: GST invoices and customer list","Tax","\u20B91,599<small>/month</small>"],
 ["PAN",649,"Government fee 0-107 by route","Tax"],
 ["TAN application",649,"Government fee 77","Tax"],
 ["Income Tax return",1299,"","Tax"],
@@ -259,7 +260,7 @@ var ICONS={"Tax":"🧾","Setup":"🏢","Local and labour":"📋","IP and quality
  var g="",out="",sel=document.getElementById("svcsel");
  for(var i=0;i<SVC.length;i++){var s=SVC[i];
   if(s[3]!==g){g=s[3];out+='<div class="grp">'+g+'</div>';}
-  out+='<div class="card"><div class="ic">'+(ICONS[s[3]]||"📄")+'</div><h3>'+s[0]+'</h3>'+(s[2]?'<p>'+s[2]+'</p>':'')+(s[1]?'<div class="fee">₹'+s[1].toLocaleString("en-IN")+'<small>UNICK fee</small></div><button class="paybtn" onclick="openPay(\''+s[0].replace(/'/g,"")+'\')">Book ₹'+(Math.round(s[1]*0.9)).toLocaleString("en-IN")+' <small>(10% off)</small></button>':'<div class="fee">Quote on request<small>UNICK fee</small></div><a class="paybtn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/918660580564?text='+encodeURIComponent('Hi, I want a quote for: '+s[0])+'">Enquire on WhatsApp</a>')+'</div>';
+  out+='<div class="card"><div class="ic">'+(ICONS[s[3]]||"📄")+'</div><h3>'+s[0]+'</h3>'+(s[2]?'<p>'+s[2]+'</p>':'')+(s[4]?'<div class="fee">'+s[4]+'<small>UNICK fee - or \u20B912,999/year + GST</small></div><a class="paybtn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/918660580564?text=Hi%2C+I+want+the+GST+filing+%2B+Software+Panel+plan.">Start on WhatsApp</a>':s[1]?'<div class="fee">₹'+s[1].toLocaleString("en-IN")+'<small>UNICK fee</small></div><button class="paybtn" onclick="openPay(\''+s[0].replace(/'/g,"")+'\')">Book ₹'+(Math.round(s[1]*0.9)).toLocaleString("en-IN")+' <small>(10% off)</small></button>':'<div class="fee">Quote on request<small>UNICK fee</small></div><a class="paybtn" style="display:block;text-align:center;text-decoration:none" target="_blank" rel="noopener" href="https://wa.me/918660580564?text='+encodeURIComponent('Hi, I want a quote for: '+s[0])+'">Enquire on WhatsApp</a>')+'</div>';
   var o=document.createElement("option");o.value=i;o.textContent=s[0];sel.appendChild(o);
  }
  document.getElementById("svcgrid").innerHTML=out;
