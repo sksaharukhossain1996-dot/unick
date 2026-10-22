@@ -205,11 +205,11 @@ html[lang=hi] h1,html[lang=bn] h1,html[lang=hi] h2,html[lang=bn] h2{font-family:
   <label data-i18n="m_phone">Phone (WhatsApp) *</label><input id="mPhone" maxlength="15" inputmode="tel" autocomplete="tel">
   <label data-i18n="m_email">Email *</label><input id="mEmail" type="email" maxlength="120" autocomplete="email">
   <div class="merr" id="mErr"></div>
-  <button class="btn fill" id="mPayU" disabled style="width:100%;margin-top:10px;opacity:.55;cursor:not-allowed">Pay 30% advance <span id="mPayUAmt"></span> online (PayU) - Coming soon</button>
+  <button class="btn fill" id="mPayU" style="width:100%;margin-top:10px">Pay 30% advance <span id="mPayUAmt"></span> online (PayU)</button>
   <div style="font-size:11.5px;color:var(--mute);margin-top:4px;text-align:center" id="mPayUNote"></div>
   <button class="btn fill" id="mPay" style="width:100%;margin-top:10px">Enquire on WhatsApp</button>
   <button class="btn ghosty" id="mPay30" style="width:100%;margin-top:8px">Ask for 30% advance option</button>
-  <div class="mnote">Online payment is coming soon. Choose an option and we open WhatsApp with your details - just press send. We confirm your service and share payment options there: full fee with 10% off, or 30% advance and the rest before delivery. Government fees at actuals where applicable.</div>
+  <div class="mnote">Pay 30% advance online instantly, or choose an option and we open WhatsApp with your details - just press send. We confirm your service and share payment options there: full fee with 10% off, or 30% advance and the rest before delivery. Government fees at actuals where applicable.</div>
  </div>
 </div>
 <section id="payResult"><div class="wrap"><div class="card" style="max-width:560px;margin:auto;text-align:center">
@@ -297,7 +297,7 @@ window.openPay = function(dispName){
  const bal = p[1] - adv30;
  const balGst = Math.round(bal * 0.18);
  $('mPayUAmt').textContent = '\u20b9' + (adv30 + advGst).toLocaleString('en-IN');
- $('mPayUNote').textContent = 'Advance \u20b9' + adv30.toLocaleString('en-IN') + ' + 18% GST \u20b9' + advGst.toLocaleString('en-IN') + '. Balance \u20b9' + (bal + balGst).toLocaleString('en-IN') + ' (\u20b9' + bal.toLocaleString('en-IN') + ' + GST) before delivery. Online payment opens once PayU goes live.';
+ $('mPayUNote').textContent = 'Advance \u20b9' + adv30.toLocaleString('en-IN') + ' + 18% GST \u20b9' + advGst.toLocaleString('en-IN') + '. Balance \u20b9' + (bal + balGst).toLocaleString('en-IN') + ' (\u20b9' + bal.toLocaleString('en-IN') + ' + GST) before delivery.';
  $('mPay').disabled = false;
  $('mPay').textContent = 'Book full ₹' + p[1].toLocaleString('en-IN') + ' (10% off) - enquire on WhatsApp';
  const adv = Math.round(p[0] * 0.3);
@@ -329,6 +329,25 @@ async function startEnquiry(mode){
  $('mPay').disabled = false; $('mPay30').disabled = false;
 }
 $('mPay').addEventListener('click', () => startEnquiry('full'));
+async function startPayU(){
+ const p = PAY[curSvc]; const err = $('mErr'); err.textContent = '';
+ const name = $('mName').value.trim().slice(0,120), phone = $('mPhone').value.trim().slice(0,20), email = $('mEmail').value.trim().slice(0,120);
+ if (!name || !phone || !email) { err.textContent = 'Please fill name, phone and email.'; return; }
+ $('mPayU').disabled = true;
+ try {
+  const now = new Date().toISOString();
+  const ref = doc(collection(db, 'serviceLeads'));
+  const leadId = ref.id;
+  await setDoc(ref, { name, phone, email, company: '', age: '', gst: '', gender: '', requestedService: curSvc, paymentChoice: 'advance_30_payu', consent: true, source: 'unick_site', status: 'New leads', statusHistory: [{ stage: 'New leads', at: now, by: 'unick_site' }], createdAt: now });
+  const r = await fetch(WORKER + '/api/payu/service/form', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service: curSvc, leadId, name, email, phone }) });
+  const d = await r.json();
+  if (!r.ok || !d.action || !d.fields) { err.textContent = (d && d.error) ? d.error : 'Payment could not start. Please try again or use WhatsApp.'; $('mPayU').disabled = false; return; }
+  const f = document.createElement('form'); f.method = 'POST'; f.action = d.action;
+  Object.keys(d.fields).forEach(k => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = d.fields[k]; f.appendChild(i); });
+  document.body.appendChild(f); f.submit();
+ } catch (e) { err.textContent = 'Network error starting payment. Please try again or use WhatsApp.'; $('mPayU').disabled = false; }
+}
+$('mPayU').addEventListener('click', startPayU);
 $('mPay30').addEventListener('click', () => startEnquiry('advance30'));
 (async function paymentReturn(){
  const q = new URLSearchParams(location.search); const st = q.get('payment'); if (!st) return;
@@ -340,10 +359,10 @@ $('mPay30').addEventListener('click', () => startEnquiry('advance30'));
   try {
    const r = await fetch(WORKER + '/api/payu/service/status?txn=' + encodeURIComponent(txn));
    const d = await r.json();
-   if (d.paid) { $('prTitle').textContent = 'Payment received'; $('prText').textContent = 'Thank you. UNICK DIGITAL will contact you about the next steps. Reference: ' + txn; }
+   if (d.verified) { $('prTitle').textContent = 'Payment received'; $('prText').textContent = 'Thank you. UNICK DIGITAL will contact you about the next steps. Reference: ' + txn; }
    else { $('prTitle').textContent = 'Payment not confirmed yet'; $('prText').textContent = 'If money was deducted, it usually settles or refunds automatically. Message us with reference ' + txn + '.'; }
   } catch (e) { $('prTitle').textContent = 'Could not confirm automatically'; $('prText').textContent = 'Message us on WhatsApp with reference ' + txn + ' and we will confirm manually.'; }
- } else if (st === 'failure') { $('prTitle').textContent = 'Payment did not go through'; $('prText').textContent = 'No money was taken, or it will auto-refund. You can try again or pay later after we contact you.'; }
+ } else if (st === 'failure' || st === 'failed') { $('prTitle').textContent = 'Payment did not go through'; $('prText').textContent = 'No money was taken, or it will auto-refund. You can try again or pay later after we contact you.'; }
 })();
 </script>
 <!-- ===== PAYEL : UNICK AI Assistant widget (Stage 1, preview) ===== -->
