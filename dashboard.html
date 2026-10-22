@@ -87,7 +87,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 const FY='01/04/2026 to 31/03/2027';
 // ---------- data layer ----------
 let MODE='live', DB=null, AUTH=null, FB=null;
-let D={leads:[],services:[],customers:[],payments:[]};           // working data (demo or live-mirrored)
+let D={leads:[],services:[],customers:[],payments:[],staff:[],attendance:[],commissions:[]};           // working data (demo or live-mirrored)
 let ctr={lead:1000,svc:100};
 const SVC_SEED=[['GST registration',1299,1169],['PAN',649,584],['Export Import Code (IEC)',1949,1754],['Company registration',12999,11699],['Trademark',8449,7604],['FSSAI (food license)',1299,1169],['ISO certificate',6499,5849],['Digital Signature (DSC)',2599,2339],['Income Tax return',1299,1169],['GST return filing',1299,1169],['Trade license',2599,2339],['Shop & Establishment registration',1299,1169],['EPF registration',1299,1169],['ESI registration',1299,1169],['Professional Tax registration',1299,1169],['Partnership firm registration',3899,3509],['LLP registration',10399,9359],['Copyright',6499,5849],['TAN application',649,584],['Startup India (DPIIT)',2599,2339],['WhatsApp Automation',6499,5849],['AI Chat Agent',0,0],['AI Voice and Calling Agent',0,0],['AI Video and Reels Creation',0,0],['Business Website',0,0],['Management Software',0,0],['Android App',0,0],['GST and HSN Tools Setup',0,0]];
 function demoData(){D.leads=[
@@ -106,6 +106,9 @@ const trash=k=>D[k].filter(x=>x.deleted);
 const CHOICE=[['full_enquiry','Full fee (10% off) - enquiry'],['advance_30_percent_enquiry','30% advance - enquiry']];
 const M={
 leads:{t:'Leads (Website Enquiries)',sort:'createdAt',rev:1,f:[['leadNo','Lead ID','t'],['name','Name','t'],['phone','Phone','t'],['email','Email','t'],['requestedService','Service','sd'],['paymentChoice','Payment choice','s',CHOICE.map(c=>c[0]),CHOICE.map(c=>c[1])],['status','Status','s',['New leads','Contacted','Quoted','Won','Lost']],['serviceStatus','Service status','s',['New','In progress','Waiting for documents','Completed','Cancelled']],['customerId','Customer','sc'],['followUp','Follow-up','d'],['quotedAmount','Quoted ₹','m'],['receivedAmount','Received ₹','m'],['paymentStatus','Payment status','s',['Not paid','Advance received','Fully paid']],['note','Note','t']],ro:['leadNo']},
+staff:{t:'Staff (Team)',sort:'createdAt',rev:1,f:[['unsId','Staff ID','t'],['name','Name','t'],['phone','Phone','t'],['email','Email','t'],['role','Role','s',['Sales','Support','Operations']],['status','Status','s',['pending','approved','rejected','left']],['joinedAt','Joined','t']],ro:['unsId','joinedAt']},
+attendance:{t:'Staff Attendance',sort:'date',rev:1,f:[['attId','Rec ID','t'],['staffId','Staff ID','t'],['staffName','Staff','t'],['date','Date','d'],['checkIn','Check-in','t'],['checkOut','Check-out','t'],['hours','Hours','m'],['note','Note','t']],ro:['attId','staffId','staffName','date','checkIn','checkOut','hours']},
+commissions:{t:'Staff Commission (15% - drafts)',sort:'month',rev:1,f:[['comNo','Stmt ID','t'],['staffId','Staff ID','t'],['staffName','Staff','t'],['month','Month','t'],['collections','Collections Rs.','m'],['commission','Commission 15% Rs.','m'],['status','Status','s',['draft','approved','paid']],['note','Note','t']],ro:['comNo','commission']},
 services:{t:'Services & Fees',sort:'svcNo',f:[['svcNo','Svc ID','t'],['name','Service','t'],['full','Full fee ₹','m'],['offer','Offer fee ₹ (10% off)','m'],['active','Active','s',['Yes','No']]],ro:['svcNo']},
 customers:{t:'Customers',sort:'custNo',f:[['custNo','Cust ID','t'],['name','Name','t'],['phone','Phone','t'],['email','Email','t'],['company','Company','t'],['gstin','GSTIN','t'],['city','City','t'],['state','State','t'],['note','Note','t']],ro:['custNo'],
 det:c=>{const L=live('leads').filter(l=>l.customerId==c.id);if(!L.length)return`<div class="det" style="margin-top:8px"><div class="pl">Linked leads &amp; payments - none yet</div></div>`;
@@ -115,7 +118,7 @@ payments:{t:'Payment Records',sort:'date',rev:1,banner:'Records only - online co
 f:[['payNo','Receipt ID','t'],['date','Date','d'],['customerId','Customer','sc'],['name','Received from','t'],['service','For service','sd'],['amount','Amount ₹','m'],['mode','Mode','s',['UPI','Cash','Bank transfer','Card','Other']],['type','Type','s',['Advance','Part payment','Full payment','Refund']],['status','Status','s',['Recorded','Draft','Cancelled']],['reference','Reference/Txn no','t'],['note','Note','t']],ro:['payNo'],
 det:r=>{const L=live('payments').filter(x=>x.customerId&&x.customerId==r.customerId&&x.id!=r.id);return''}}
 };
-const PAGETITLE={leads:'Leads Register',services:'Services & Fee List',customers:'Customers Register',payments:'Payment Records Register',pay:'Payments & Enquiries'};
+const PAGETITLE={leads:'Leads Register',services:'Services & Fee List',customers:'Customers Register',payments:'Payment Records Register',pay:'Payments & Enquiries',staff:'Staff Register',attendance:'Attendance Register',commissions:'Commission Register'};
 // ---------- window manager ----------
 let z=10,nw=0;const sel={};
 function foc(e){document.querySelectorAll('.win').forEach(x=>x.classList.remove('act'));e.classList.add('act');e.style.zIndex=++z}
@@ -132,11 +135,50 @@ function stat(){const L=live('leads');const nw2=L.filter(l=>l.status=='New leads
 const pend=L.reduce((s,l)=>s+Math.max((+l.quotedAmount||0)-(+l.receivedAmount||0),0),0);
 const fu=L.filter(l=>l.followUp==today()).length;
 $('#status').innerHTML=`${MODE=='demo'?'<span class="demo">DEMO DATA</span>':''}<span>${CO.n}</span><span>Period 1 · ${FY}</span><span>Leads ${L.length} (New ${nw2})</span><span>Follow-ups today ${fu}</span><span>Payments pending ${inr(pend)}</span>`}
+async function approveStaff(id){const r=(D.staff||[]).find(x=>x.id==id);if(!r)return;
+if(!confirm('Approve '+r.name+'? This creates their staff login, emails a set-password link, and assigns a Staff ID.'))return;
+try{
+ const unsId=await nextNo('staff');
+ let uid='',mailNote='';
+ if(MODE=='live'){
+  try{
+   const[a,au]=await Promise.all([import('https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js'),import('https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js')]);
+   const app2=a.initializeApp({apiKey:'AIzaSyANRNCASxjGE-IZSLdCws_6W4VpjemO1aI',authDomain:'udecs-store.firebaseapp.com',projectId:'udecs-store',appId:'1:859203239571:web:e541cc2e68f880efa41766'},'unick-staff-'+Date.now());
+   const auth2=au.getAuth(app2);
+   const temp='Unick!'+Math.random().toString(36).slice(2,10)+'9';
+   const cred=await au.createUserWithEmailAndPassword(auth2,r.email,temp);
+   uid=cred.user.uid;
+   await au.sendPasswordResetEmail(auth2,r.email);
+   await auth2.signOut();
+   try{await FB.setDoc(FB.doc(DB,'unickMeta','staffUids'),{[uid]:true},{merge:true})}catch(e){console.warn('staffUids registry failed (rules?)',e)}
+   mailNote=' Set-password email sent to '+r.email+'.';
+  }catch(e){mailNote=' LOGIN CREATE FAILED: '+e.message}
+ }
+ const now=new Date().toISOString();
+ await commitSave('staff',id,{status:'approved',unsId:unsId,joinedAt:now,approvedAt:now,authUid:uid});
+ alert('Approved '+r.name+' as '+unsId+'.'+mailNote+'\n\nOffer letter: pending email sender route - generate from the approved template when ready.');
+}catch(e){alert('Approve failed: '+e.message)}}
+async function genCommission(){const st=(D.staff||[]).filter(x=>x.status=='approved');
+if(!st.length)return alert('No approved staff yet.');
+const names=st.map((s,i)=>(i+1)+'. '+s.name+' ('+(s.unsId||'')+')').join('\n');
+const pick=prompt('Generate monthly commission draft (15% of payments received from their leads). Pick staff:\n'+names,'1');
+const s=st[(+pick||1)-1];if(!s)return;
+const month=prompt('Month (YYYY-MM):',new Date().toISOString().slice(0,7));if(!month)return;
+const myLeads=(D.leads||[]).filter(l=>l.staffId==s.id||l.staffId==s.unsId||l.broughtBy==s.unsId);
+const pays=(D.payments||[]).filter(p=>(p.date||p.createdAt||'').startsWith(month)&&myLeads.some(l=>l.id==p.leadId||l.leadNo==p.leadNo));
+const coll=pays.reduce((a,p)=>a+(+p.receivedAmount||+p.amount||0),0);
+const com=Math.round(coll*0.15*100)/100;
+if(!confirm('Staff: '+s.name+'\nMonth: '+month+'\nPayments found: '+pays.length+' (leads attributed: '+myLeads.length+')\nCollections: Rs.'+coll+'\nCommission 15%: Rs.'+com+'\n\nSave as DRAFT?'))return;
+try{await commitSave('commissions',null,{staffId:s.unsId||'',staffName:s.name,month:month,collections:coll,commission:com,status:'draft',paymentIds:pays.map(p=>p.payNo||p.id).join(','),createdAt:new Date().toISOString(),note:''});alert('Draft saved in Commission register.')}catch(e){alert('Save failed: '+e.message)}}
+async function rejectStaff(id){const r=(D.staff||[]).find(x=>x.id==id);if(!r)return;
+const reason=prompt('Reject '+r.name+'? Reason (goes on record):','');
+if(reason===null)return;
+try{await commitSave('staff',id,{status:'rejected',rejectedAt:new Date().toISOString(),rejectReason:reason});}catch(e){alert('Reject failed: '+e.message)}}
 // ---------- list rendering ----------
 const custLabel=id=>{const c=D.customers.find(x=>x.id==id);return c?(c.custNo||'')+' '+c.name:''};
 function cell(f,r){const v=r[f[0]];if(f[2]=='m')return inr(v);if(f[0]=='paymentChoice'){const c=CHOICE.find(x=>x[0]==v);return esc(c?c[1]:v||'')}if(f[0]=='customerId')return esc(custLabel(v));return esc(v)}
 function listHtml(k){const m=M[k];let rows=[...live(k)];if(m.sort)rows.sort((a,b)=>a[m.sort]>b[m.sort]?(m.rev?-1:1):(m.rev?1:-1));const s=rows.find(r=>r.id==sel[k]);
-return tbr(k)+(m.banner?`<div style="background:#fff8e1;border:1px solid #d9b84a;padding:4px 8px;font-size:12px">${m.banner}</div>`:'')+`<div class="pl">${CO.n} · ${PAGETITLE[k]} · ${FY}</div><div class="tw"><table><tr><th>Edit / Delete</th>${m.f.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr class="${r.id==sel[k]?'sel':''}" onclick="pick('${k}','${r.id}')" ondblclick="edit('${k}','${r.id}')"><td style="white-space:nowrap" onclick="event.stopPropagation()"><button title="Edit" onclick="edit('${k}','${r.id}')">✎</button> <button title="Delete (goes to Trash)" onclick="del('${k}','${r.id}')">🗑</button></td>${m.f.map(f=>`<td>${f[0]=='serviceStatus'?`<select onclick="event.stopPropagation()" onchange="svcStat('${k}','${r.id}',this.value)">${f[3].map(o=>`<option ${(r.serviceStatus||'New')==o?'selected':''}>${o}</option>`).join('')}</select>`:cell(f,r)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${m.f.length+1}">No records yet. Click New.</td></tr>`}</table></div>${m.det&&s?m.det(s):''}`}
+return tbr(k)+(m.banner?`<div style="background:#fff8e1;border:1px solid #d9b84a;padding:4px 8px;font-size:12px">${m.banner}</div>`:'')+`<div class="pl">${CO.n} · ${PAGETITLE[k]} · ${FY}</div><div class="tw"><table><tr><th>Edit / Delete</th>${m.f.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr class="${r.id==sel[k]?'sel':''}" onclick="pick('${k}','${r.id}')" ondblclick="edit('${k}','${r.id}')"><td style="white-space:nowrap" onclick="event.stopPropagation()">${k=='staff'&&r.status=='pending'?`<button title="Approve" style="color:#060;font-weight:700" onclick="approveStaff('${r.id}')">✔</button> <button title="Reject" style="color:#a00" onclick="rejectStaff('${r.id}')">✖</button> `:''}<button title="Edit" onclick="edit('${k}','${r.id}')">✎</button> <button title="Delete (goes to Trash)" onclick="del('${k}','${r.id}')">🗑</button></td>${m.f.map(f=>`<td>${f[0]=='serviceStatus'?`<select onclick="event.stopPropagation()" onchange="svcStat('${k}','${r.id}',this.value)">${f[3].map(o=>`<option ${(r.serviceStatus||'New')==o?'selected':''}>${o}</option>`).join('')}</select>`:cell(f,r)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${m.f.length+1}">No records yet. Click New.</td></tr>`}</table></div>${m.det&&s?m.det(s):''}`}
 function tbr(k,expK){const x=expK||k;return`<div class="tbr"><button onclick="edit('${k}')">➕ New</button><button onclick="edit('${k}',sel['${k}'])">✎ Edit</button><button onclick="del('${k}',sel['${k}'])">🗑 Delete</button><button onclick="imp('${k}')">⬆ Import</button><button onclick="expdf('${x}')">🖶 PDF</button><button onclick="exfile('${x}','csv')">⬇ CSV</button><button onclick="exfile('${x}','xlsx')">⬇ XLS</button><button onclick="dlmod('${x}')">💾 Download</button><button onclick="back()">↩ Back</button><button onclick="this.closest('.win').remove()">✖ Close</button></div>`}
 function tbrExp(k){return`<div class="tbr"><button onclick="expdf('${k}')">🖶 PDF</button><button onclick="exfile('${k}','csv')">⬇ CSV</button><button onclick="exfile('${k}','xlsx')">⬇ XLS</button><button onclick="dlmod('${k}')">💾 Download</button><button onclick="back()">↩ Back</button><button onclick="this.closest('.win').remove()">✖ Close</button></div>`}
 function pick(k,id){sel[k]=id;paint(document.getElementById('w-'+k))}
@@ -160,10 +202,10 @@ if(key=='leadNo'||key=='svcNo'||key=='custNo'||key=='payNo')return'';
 return`<label>${lb}<input name="${key}" type="${ty=='d'?'date':ty=='m'?'number':'text'}" step="any" ${key=='name'?'required':''} value="${esc(r[key]??(ty=='d'?'':''))}"></label>`}).join('')+`<div class="act2"><button value="x" formnovalidate>Cancel</button><button value="ok">OK</button></div>`;
 $('#fm').onsubmit=e=>{if(e.submitter.value!='ok')return;const d=Object.fromEntries(new FormData($('#fm')));['quotedAmount','receivedAmount','full','offer','amount'].forEach(f=>{if(d[f]!=null)d[f]=+d[f]||0});commitSave(k,id,d)};
 $('#dg').showModal()}
-const COLL={leads:'serviceLeads',services:'unickServices',customers:'unickCustomers',payments:'unickPayments'};
-const IDF={leads:'leadNo',services:'svcNo',customers:'custNo',payments:'payNo'};
-const PFX={leads:'UL-',services:'US-',customers:'UC-',payments:'UP-'};
-const CTR={leads:'lead',services:'svc',customers:'cust',payments:'pay'};
+const COLL={leads:'serviceLeads',services:'unickServices',customers:'unickCustomers',payments:'unickPayments',staff:'unickStaff',attendance:'unickAttendance',commissions:'unickCommissions'};
+const IDF={leads:'leadNo',services:'svcNo',customers:'custNo',payments:'payNo',staff:'unsId',attendance:'attId',commissions:'comNo'};
+const PFX={leads:'UL-',services:'US-',customers:'UC-',payments:'UP-',staff:'UNS-',attendance:'UA-',commissions:'UCOM-'};
+const CTR={leads:'lead',services:'svc',customers:'cust',payments:'pay',staff:'staff',attendance:'att',commissions:'com'};
 async function commitSave(k,id,d){
 if(MODE=='demo'){if(id)Object.assign(D[k].find(x=>x.id==id),d);else{const p=PFX[k]+(k=='leads'?++ctr.lead:String(++ctr[CTR[k]]).padStart(3,'0'));D[k].push({id:'n'+Date.now(),[IDF[k]]:p,createdAt:new Date().toISOString(),source:'classic_dashboard',status:k=='leads'?(d.status||'New leads'):undefined,...d})}all();return}
 try{
@@ -172,7 +214,7 @@ try{
   await FB.addDoc(FB.collection(DB,COLL[k]),{source:'classic_dashboard',createdAt:new Date().toISOString(),[IDF[k]]:no,...extra,...d})}
  }catch(x){alert('Save failed: '+x.message)}}
 async function nextNo(which){const ref=FB.doc(DB,'unickMeta','counters');const no=await FB.runTransaction(DB,async t=>{const s=await t.get(ref);const v=((s.exists()?s.data()[which]:0)||(which=='lead'?1000:100))+1;t.set(ref,{[which]:v},{merge:true});return v});
-return which=='lead'?'UL-'+no:which=='svc'?'US-'+String(no).padStart(3,'0'):which=='pay'?'UP-'+String(no).padStart(3,'0'):'UC-'+String(no).padStart(3,'0')}
+return which=='lead'?'UL-'+no:which=='svc'?'US-'+String(no).padStart(3,'0'):which=='pay'?'UP-'+String(no).padStart(3,'0'):which=='staff'?'UNS-'+String(no).padStart(4,'0'):'UC-'+String(no).padStart(3,'0')}
 async function svcStat(k,id,v){if(MODE=='demo'){D[k].find(x=>x.id==id).serviceStatus=v;all();return}try{await FB.updateDoc(FB.doc(DB,COLL[k],id),{serviceStatus:v})}catch(x){alert('Status save failed: '+x.message)}}
 async function del(k,id){if(!id||id==='null')return alert('Select a record first');if(!confirm('Delete this record? It goes to Trash and can be restored.'))return;
 if(MODE=='demo'){D[k].find(x=>x.id==id).deleted=true;all();return}
@@ -232,14 +274,14 @@ function homeHtml(){const L=live('leads');const pend=L.reduce((s,l)=>s+Math.max(
 const g=(t,a)=>`<fieldset><legend>${t}</legend><div class="grid">${a.map(([i,l,k])=>`<button class="bn" onclick="run('${k}')"><i>${i}</i>${l}</button>`).join('')}</div></fieldset>`;
 return`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b><br>Classic Management Dashboard · GST ${CO.g}</div></div>`
 +`<div class="sum"><div>Total leads<b>${L.length}</b></div><div>New leads<b>${L.filter(l=>l.status=='New leads').length}</b></div><div>Follow-ups today<b>${L.filter(l=>l.followUp==today()).length}</b></div><div>Payments pending<b>${inr(pend)}</b></div><div>Received<b>${inr(L.reduce((s,l)=>s+(+l.receivedAmount||0),0))}</b></div></div>`
-+g('Manage',[['🎯','Leads (Enquiries)','leads'],['👥','Customers','customers'],['🛠️','Services & Fees','services'],['🧾','Payment Records','payments'],['💰','Payments & Enquiries','pay'],['🗑','Trash','trash']])
++g('Manage',[['🎯','Leads (Enquiries)','leads'],['👔','Staff','staff'],['🕒','Attendance','attendance'],['💼','Commission','commissions'],['🧮','New commission draft','gencom'],['👥','Customers','customers'],['🛠️','Services & Fees','services'],['🧾','Payment Records','payments'],['💰','Payments & Enquiries','pay'],['🗑','Trash','trash']])
 +g('Reports',[['📊','Leads by Status','rbs'],['📈','Enquiries by Service','rbsv'],['💵','Payments Summary','rps']])
 +g('Data',[['💾','Backup data','backup'],['⬆','Restore backup','restore']])}
 // ---------- seed (live, on explicit click) ----------
 async function seedServices(){if(MODE=='demo')return alert('Demo mode - services already loaded.');if(!confirm('Add the 28 website services with current fees to the dashboard? Do this once.'))return;
 try{for(const s of SVC_SEED){const no=await nextNo('svc');await FB.addDoc(FB.collection(DB,'unickServices'),{svcNo:no,name:s[0],full:s[1],offer:s[2],active:'Yes'})}alert('Services added.')}catch(x){alert('Seed failed: '+x.message)}}
 // ---------- menu ----------
-const MENU=[['File',[['Backup data','backup'],['Restore data','restore'],['Print','print']]],['Sales',[['Leads (Website Enquiries)','leads'],['Customers','customers'],['Services & Fees','services'],['Payment Records','payments'],['Payments & Enquiries','pay'],['Trash','trash']]],['Reports',[['Leads by Status','rbs'],['Enquiries by Service','rbsv'],['Payments Summary','rps']]],['Window',[['Home','home'],['Close all','closeall']]],['Help',[['About','about']]]];
+const MENU=[['File',[['Backup data','backup'],['Restore data','restore'],['Print','print']]],['Sales',[['Leads (Website Enquiries)','leads'],['Staff','staff'],['Attendance','attendance'],['Commission','commissions'],['Customers','customers'],['Services & Fees','services'],['Payment Records','payments'],['Payments & Enquiries','pay'],['Trash','trash']]],['Reports',[['Leads by Status','rbs'],['Enquiries by Service','rbsv'],['Payments Summary','rps']]],['Window',[['Home','home'],['Close all','closeall']]],['Help',[['About','about']]]];
 $('#menu').innerHTML=MENU.map(([t,it])=>`<div class="mi" onclick="this.classList.toggle('o')">${t}<div class="dd">${it.map(([l,k])=>`<a onclick="run('${k}')">${l}</a>`).join('')}</div></div>`).join('');
 document.addEventListener('click',e=>{if(!e.target.closest('.mi'))document.querySelectorAll('.mi.o').forEach(x=>x.classList.remove('o'))});
 function run(k){document.querySelectorAll('.mi.o').forEach(x=>x.classList.remove('o'));
@@ -262,6 +304,9 @@ FB.onSnapshot(FB.collection(DB,'serviceLeads'),s=>{D.leads=s.docs.map(d=>({id:d.
 FB.onSnapshot(FB.collection(DB,'unickServices'),s=>{D.services=s.docs.map(d=>({id:d.id,...d.data()}));if(!s.size)setTimeout(()=>{if(confirm('No services in dashboard yet. Add the 28 website services now?'))seedServices()},600);all()});
 FB.onSnapshot(FB.collection(DB,'unickCustomers'),s=>{D.customers=s.docs.map(d=>({id:d.id,...d.data()}));all()});
 FB.onSnapshot(FB.collection(DB,'unickPayments'),s=>{D.payments=s.docs.map(d=>({id:d.id,...d.data()}));all()});
+FB.onSnapshot(FB.collection(DB,'unickStaff'),s=>{D.staff=s.docs.map(d=>({id:d.id,...d.data()}));all()});
+FB.onSnapshot(FB.collection(DB,'unickAttendance'),s=>{D.attendance=s.docs.map(d=>({id:d.id,...d.data()}));all()});
+FB.onSnapshot(FB.collection(DB,'unickCommissions'),s=>{D.commissions=s.docs.map(d=>({id:d.id,...d.data()}));all()});
 run('home')}catch(x){$('#lerr').textContent=x.message}}
 function demo(){MODE='demo';demoData();const e=$('#w-login');e&&e.remove();run('home');stat()}
 // ---------- boot ----------
