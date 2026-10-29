@@ -213,7 +213,7 @@ try{await commitSave('staff',id,{status:'rejected',rejectedAt:new Date().toISOSt
 const custLabel=id=>{const c=D.customers.find(x=>x.id==id);return c?(c.custNo||'')+' '+c.name:''};
 function cell(f,r){const v=r[f[0]];if(f[2]=='m')return inr(v);if(f[0]=='paymentChoice'){const c=CHOICE.find(x=>x[0]==v);return esc(c?c[1]:v||'')}if(f[0]=='customerId')return esc(custLabel(v));return esc(v)}
 function listHtml(k){if(!sourceReady(k))return sourceNotice(k);const m=M[k];let rows=[...live(k)];if(m.sort)rows.sort((a,b)=>a[m.sort]>b[m.sort]?(m.rev?-1:1):(m.rev?1:-1));const s=rows.find(r=>r.id==sel[k]);
-return tbr(k)+(MODE!=='demo'?'<p class=readonly-note>Read-only review: New, Edit, Delete, Import, export and staff actions are held. Existing records stay unchanged.</p>':'')+(m.banner?`<div style="background:#fff8e1;border:1px solid #d9b84a;padding:4px 8px;font-size:12px">${MODE==='demo'?m.banner:(k==='payments'?'Read-only payment records. Online collection is not active here. Adding or changing received amounts is held.':m.banner)}</div>`:'')+`<div class="pl">${CO.n} · ${PAGETITLE[k]} · ${FY}</div><div class="tw"><table><tr><th>Edit / Delete</th>${m.f.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr class="${r.id==sel[k]?'sel':''}" onclick="pick('${k}','${r.id}')" ondblclick="edit('${k}','${r.id}')"><td style="white-space:nowrap" onclick="event.stopPropagation()">${k=='staff'&&r.status=='pending'?`<button title="Approve" style="color:#060;font-weight:700" onclick="approveStaff('${r.id}')">OK</button> <button title="Reject" style="color:#a00" onclick="rejectStaff('${r.id}')">No</button> `:''}<button title="Edit" onclick="edit('${k}','${r.id}')">E</button> <button title="Delete (goes to Trash)" onclick="del('${k}','${r.id}')">X</button></td>${m.f.map(f=>`<td>${f[0]=='serviceStatus'?`<select onclick="event.stopPropagation()" onchange="svcStat('${k}','${r.id}',this.value)">${f[3].map(o=>`<option ${(r.serviceStatus||'New')==o?'selected':''}>${o}</option>`).join('')}</select>`:cell(f,r)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${m.f.length+1}">${MODE==='demo'?'No records yet. Click New.':'This source returned no records. Read-only access; changes remain held.'}</td></tr>`}</table></div>${m.det&&s?m.det(s):''}`}
+return tbr(k)+(MODE!=='demo'?'<p class=readonly-note>Manual contact/work actions only after activation. Money, imports, exports and staff account changes stay held.</p>':'')+(m.banner?`<div style="background:#fff8e1;border:1px solid #d9b84a;padding:4px 8px;font-size:12px">${MODE==='demo'?m.banner:(k==='payments'?'Read-only payment records. Online collection is not active here. Adding or changing received amounts is held.':m.banner)}</div>`:'')+`<div class="pl">${CO.n} · ${PAGETITLE[k]} · ${FY}</div><div class="tw"><table><tr><th>Edit / Delete</th>${m.f.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr class="${r.id==sel[k]?'sel':''}" onclick="pick('${k}','${r.id}')" ondblclick="edit('${k}','${r.id}')"><td style="white-space:nowrap" onclick="event.stopPropagation()">${k=='staff'&&r.status=='pending'?`<button title="Approve" style="color:#060;font-weight:700" onclick="approveStaff('${r.id}')">OK</button> <button title="Reject" style="color:#a00" onclick="rejectStaff('${r.id}')">No</button> `:''}<button title="Edit" onclick="edit('${k}','${r.id}')">E</button> <button title="Delete (goes to Trash)" onclick="del('${k}','${r.id}')">X</button></td>${m.f.map(f=>`<td>${f[0]=='serviceStatus'?`<select onclick="event.stopPropagation()" onchange="svcStat('${k}','${r.id}',this.value)">${f[3].map(o=>`<option ${(r.serviceStatus||'New')==o?'selected':''}>${o}</option>`).join('')}</select>`:cell(f,r)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${m.f.length+1}">${MODE==='demo'?'No records yet. Click New.':'This source returned no records. Read-only access; changes remain held.'}</td></tr>`}</table></div>${m.det&&s?m.det(s):''}`}
 function tbr(k,expK){const x=expK||k;return`<div class="tbr"><button onclick="edit('${k}')">+ New</button><button onclick="edit('${k}',sel['${k}'])">Edit</button><button onclick="del('${k}',sel['${k}'])">Delete</button><button onclick="imp('${k}')">Import</button><button onclick="expdf('${x}')">PDF</button><button onclick="exfile('${x}','csv')">CSV</button><button onclick="exfile('${x}','xlsx')">XLS</button><button onclick="dlmod('${x}')">Download</button><button onclick="back()">Back</button><button onclick="this.closest('.win').remove()">Close</button></div>`}
 function tbrExp(k){return`<div class="tbr"><button onclick="expdf('${k}')">PDF</button><button onclick="exfile('${k}','csv')">CSV</button><button onclick="exfile('${k}','xlsx')">XLS</button><button onclick="dlmod('${k}')">Download</button><button onclick="back()">Back</button><button onclick="this.closest('.win').remove()">Close</button></div>`}
 function pick(k,id){sel[k]=id;paint(document.getElementById('w-'+k))}
@@ -312,7 +312,7 @@ const rep=(t,id,k,w)=>win(id,t,()=>tbrExp(k)+`<div class="pl">${CO.n} · ${t} ·
 function homeHtml(){if(MODE!=='demo'&&Object.keys(D).some(k=>!sourceReady(k)))return '<h2>UNICK management: source check</h2>'+Object.keys(D).map(k=>`<h3>${esc(M[k]?.t||k)}</h3>`+(sourceReady(k)?'<p>Source loaded. Live changes held.</p>':sourceNotice(k))).join('');const L=live('leads');const pend=L.reduce((s,l)=>s+Math.max((+l.quotedAmount||0)-(+l.receivedAmount||0),0),0);
 const g=(t,a)=>`<fieldset><legend>${t}</legend><div class="grid">${a.map(([i,l,k])=>`<button class="bn" onclick="run('${k}')"><i>${i}</i>${l}</button>`).join('')}</div></fieldset>`;
 return`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b><br>Classic Management Dashboard · GST ${CO.g}</div></div>`
-+(MODE!=='demo'?'<p class=readonly-note><b>Read-only review.</b> View existing lists and reports. Edits, import, service seeding, staff accounts/emails and exports are held pending separate review.</p>':'')+`<div class="sum"><div>Total leads<b>${L.length}</b></div><div>New leads<b>${L.filter(l=>l.status=='New leads').length}</b></div><div>Follow-ups today<b>${L.filter(l=>l.followUp==today()).length}</b></div><div>Payments pending<b>${inr(pend)}</b></div><div>Received<b>${inr(L.reduce((s,l)=>s+(+l.receivedAmount||0),0))}</b></div></div>`
++(MODE!=='demo'?'<p class=readonly-note><b>Limited manual access.</b> Leads and Customers can be added or edited. Leads can go to Trash and be restored. Services can be active or inactive. Prices, payments, staff accounts, import/export and permanent delete stay held.</p>':'')+`<div class="sum"><div>Total leads<b>${L.length}</b></div><div>New leads<b>${L.filter(l=>l.status=='New leads').length}</b></div><div>Follow-ups today<b>${L.filter(l=>l.followUp==today()).length}</b></div><div>Payments pending<b>${inr(pend)}</b></div><div>Received<b>${inr(L.reduce((s,l)=>s+(+l.receivedAmount||0),0))}</b></div></div>`
 +g('Manage',[['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#e5484d"/><circle cx="12" cy="12" r="7" fill="#fff"/><circle cx="12" cy="12" r="4" fill="#e5484d"/><path d="M12 12L21 3m-5 0h5v5" stroke="#215fc6" stroke-width="2"/></svg>','Leads (Enquiries)','leads'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3l4 3 4-3 6 5-4 4v10H6V12L2 8z" fill="#3689ce"/><path d="M10 5l2 2 2-2-1 4 2 8-3 4-3-4 2-8z" fill="#e65d5d"/></svg>','Staff','staff'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#c8e4f9" stroke="#3c729e" stroke-width="2"/><path d="M12 5v8l5 3" stroke="#183d5d" stroke-width="2" fill="none"/></svg>','Attendance','attendance'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2" fill="#9d632d"/><path d="M8 7V3h8v4M2 12h20" fill="none" stroke="#70411f" stroke-width="2"/><rect x="10" y="11" width="4" height="4" fill="#f5cd67"/></svg>','Commission','commissions'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="21" rx="2" fill="#5e7b9a"/><rect x="7" y="5" width="10" height="5" fill="#c9e7d7"/><path d="M7 14h3m4 0h3M7 19h3m4 0h3" stroke="#fff" stroke-width="2"/></svg>','New commission draft','gencom'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="7" r="4" fill="#eebd83"/><circle cx="17" cy="8" r="3" fill="#d9986e"/><path d="M1 22v-5a7 7 0 0 1 14 0v5" fill="#3689ce"/><path d="M15 22v-6a8 8 0 0 0-1-4c6-2 10 3 10 6v4" fill="#3caa86"/></svg>','Customers','customers'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3l17 17-3 3L1 6z" fill="#e6a53c"/><path d="M20 2a6 6 0 0 1-7 8L5 22l-4-4 11-8a6 6 0 0 1 8-8l-4 4 3 3z" fill="#7c98ae" stroke="#456078"/></svg>','Services & Fees','services'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h14v20l-3-2-4 2-4-2-3 2z" fill="#fff6d8" stroke="#bf9e55"/><path d="M8 6h8M8 10h8M8 14h5" stroke="#427b9e" stroke-width="2"/></svg>','Payment Records','payments'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l-2 5c9 5 10 16-2 16S1 12 10 7z" fill="#eac45a" stroke="#b78a20"/><path d="M9 10h6m-6 3h6m-6-3c6 0 6 5 0 5l5 4" fill="none" stroke="#6a5a1b" stroke-width="1.5"/></svg>','Payments & Enquiries','pay'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14l-1 16H6z" fill="#a0b5be" stroke="#5b7c87"/><path d="M3 6h18M8 3h8M9 10v8m6-8v8" stroke="#5b7c87" stroke-width="2"/></svg>','Trash','trash']])
 +g('Reports',[['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v20h20" stroke="#5b7189" fill="none"/><path d="M6 18v-5" stroke="#e75e5e" stroke-width="4"/><path d="M12 18V8" stroke="#eab94c" stroke-width="4"/><path d="M18 18V3" stroke="#45a69b" stroke-width="4"/></svg>','Leads by Status','rbs'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="21" height="20" fill="#e4f0f8" stroke="#95b4cc"/><path d="M3 16l5-4 4 3 8-11" stroke="#e65e63" stroke-width="2" fill="none"/><path d="M15 4h5v5" stroke="#e65e63" fill="none"/></svg>','Enquiries by Service','rbsv'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="5" width="22" height="15" rx="1" fill="#65b586" stroke="#378258"/><circle cx="12" cy="12.5" r="5" fill="#d5efca"/><path d="M10 9h5m-5 2h5m-5-2c5 0 5 4 0 4l4 3" fill="none" stroke="#3a8157"/></svg>','Payments Summary','rps']])
 +g('Data',[['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2h15l4 4v16H2V2z" fill="#477ac1" stroke="#24518e"/><path d="M7 2h10v7H7z" fill="#c5d4e4"/><path d="M6 14h12v8H6z" fill="#fff4d4"/><path d="M9 16h6m-6 3h6" stroke="#b7a46a"/></svg>','Backup data','backup'],['<svg class="classic-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 12h6v10h8V12h6z" fill="#5f9cce" stroke="#326b9e"/></svg>','Restore backup','restore']])}
@@ -329,7 +329,7 @@ const P={home:()=>win('w-home','Home · '+CO.n,homeHtml,640),
 pay:()=>win('w-pay','Payments & Enquiries',payHtml,860),
 trash:()=>win('w-trash','Trash (recoverable)',trashHtml,560),
 rbs:()=>rep('Leads by Status','w-rbs','rbs',420),rbsv:()=>rep('Enquiries by Service','w-rbsv','rbsv',520),rps:()=>rep('Payments Summary','w-rps','rps',480),
-about:()=>win('w-about','About',()=>`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b></div></div>GST Reg. ${CO.g}<br>📞 ${CO.p} · ✉ ${CO.e}<br><br>Classic Management Dashboard v1.0<br>Mode: ${MODE=='demo'?'DEMO (sample data, nothing is saved)':'READ ONLY (verified sources only; changes held)'}`,460),
+about:()=>win('w-about','About',()=>`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b></div></div>GST Reg. ${CO.g}<br>📞 ${CO.p} · ✉ ${CO.e}<br><br>Classic Management Dashboard v1.0<br>Mode: ${MODE=='demo'?'DEMO (sample data, nothing is saved)':'LIMITED MANUAL (contacts/work only; financial and account actions held)'}`,460),
 backup:bk,restore:()=>$('#rf').click(),print:()=>window.print(),closeall:()=>document.querySelectorAll('.win').forEach(w=>w.remove())};
 P[k]&&P[k]()}
 // ---------- login / live mode ----------
@@ -337,7 +337,7 @@ function loginWin(){win('w-login','Sign in · '+CO.n,()=>`<div class="hd"><img s
 async function signin(){const uid=$('#lem').value.trim(),pw=$('#lpw').value;const em=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(uid)?uid:uid.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')+'@unick-dash.internal';$('#lerr').textContent='Signing in...';
 try{if(!FB){const[a,f,au]=await Promise.all([import('https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js'),import('https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js'),import('https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js')]);
 const app=a.initializeApp({apiKey:'AIzaSyANRNCASxjGE-IZSLdCws_6W4VpjemO1aI',authDomain:'udecs-store.firebaseapp.com',projectId:'udecs-store',appId:'1:859203239571:web:e541cc2e68f880efa41766'},'unick-dash');
-FB={collection:f.collection,doc:f.doc,setDoc:f.setDoc,addDoc:f.addDoc,updateDoc:f.updateDoc,deleteDoc:f.deleteDoc,onSnapshot:f.onSnapshot,runTransaction:f.runTransaction};DB=f.getFirestore(app);AUTH=au.getAuth(app);FB.signIn=au.signInWithEmailAndPassword}
+FB={collection:f.collection,doc:f.doc,setDoc:f.setDoc,addDoc:f.addDoc,updateDoc:f.updateDoc,deleteDoc:f.deleteDoc,onSnapshot:f.onSnapshot,runTransaction:f.runTransaction,serverTimestamp:f.serverTimestamp};DB=f.getFirestore(app);AUTH=au.getAuth(app);FB.signIn=au.signInWithEmailAndPassword}
 await FB.signIn(AUTH,em,pw);MODE='live';$('#w-login')&&$('#w-login').remove();
 Object.entries(COLL).forEach(([k,c])=>watchSource(k,c));
 run('home')}catch(x){$('#lerr').textContent=x.message}}
@@ -358,5 +358,112 @@ stat();
  function install(){const menu=document.getElementById('menu');if(!menu||document.getElementById('layoutToggle'))return;const b=document.createElement('button');b.id='layoutToggle';b.type='button';b.onclick=()=>{compact=!compact;localStorage.setItem('unick-layout',compact?'compact':'desktop');apply()};menu.append(b);apply()}
  new MutationObserver(install).observe(document.getElementById('menu'),{childList:true});install();apply();
 })();
-</script></body>
-              </html>
+</script><script>
+// PRIVATE SOURCE CANDIDATE. No deployment permission or activation inferred.
+// PRIVATE transaction-domain preparation; never accesses real Firebase.
+const allowed={leads:['name','phone','email','requestedService','status','serviceStatus','followUp','note'],customers:['name','phone','email','company','gstin','city','state','note'],services:['active']};
+const financial=['quotedAmount','receivedAmount','paymentStatus','full','offer','amount'];
+function validatePatch(kind,patch,{creating=false}={}){
+ if(!allowed[kind])throw Error('module_held');
+ if(Object.keys(patch).some(k=>financial.includes(k)))throw Error('financial_fields_held');
+ if(Object.keys(patch).some(k=>!allowed[kind].includes(k)))throw Error('unexpected_field');
+ if(kind==='services'&&creating)throw Error('new_service_fee_decision_held');
+ const d={};for(const[k,v]of Object.entries(patch)){if(typeof v!=='string'||v.length>(k==='note'?2000:160)||/[\u0000-\u0008<>]/.test(v))throw Error('invalid_text');d[k]=v.trim()}
+ if(creating&&(!d.name||d.name.length<2))throw Error('name_required');
+ if(d.name!==undefined&&d.name.length<2)throw Error('name_required');
+ if(d.phone&& !/^\+?[0-9 ()-]{10,20}$/.test(d.phone))throw Error('phone_invalid');
+ if(d.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email))throw Error('email_invalid');
+ if(d.status&&!['New leads','Contacted','Quoted','Won','Lost'].includes(d.status))throw Error('status_invalid');
+ if(d.serviceStatus&&!['New','In progress','Waiting for documents','Completed','Cancelled'].includes(d.serviceStatus))throw Error('status_invalid');
+ if(d.followUp&&!/^\d{4}-\d{2}-\d{2}$/.test(d.followUp))throw Error('date_invalid');
+ if(d.active&&!['Yes','No'].includes(d.active))throw Error('status_invalid');
+ return d;
+}
+async function saveManual({kind,id,requestId,patch,expectedVersion,store,create=false}){
+ const d=validatePatch(kind,patch,{creating:create});if(!/^[A-Za-z0-9_-]{20,100}$/.test(requestId||''))throw Error('invalid_request');
+ return store.transaction(async tx=>{
+  const prior=await tx.getRequest(requestId);if(prior)return {ok:true,id:prior.id,replayed:true};
+  const old=await tx.get(kind,id);if(create?!!old:!old)throw Error(create?'already_exists':'not_found');
+  if(!create&&old.version!==expectedVersion)throw Error('record_changed_reload');
+  // Merge immutable source/ID/financial fields untouched. Server-side rules must mirror.
+  const row=create?{...d,source:'owner_manual',version:1,deleted:false}: {...old,...d,version:old.version+1};
+  tx.set(kind,id,row);tx.setRequest(requestId,{kind,id});return {ok:true,id,replayed:false};
+ });
+}
+async function softDelete({kind,id,restore=false,expectedVersion,store}){
+ if(!allowed[kind])throw Error('module_held');return store.transaction(async tx=>{
+  const r=await tx.get(kind,id);if(!r||r.version!==expectedVersion)throw Error('record_changed_reload');
+  // Reference index must be authoritative and maintained atomically. Until that exists,
+  // customer/service deletion stays held; no client-side query as integrity guarantee.
+  if(kind!=='leads'&&!restore)throw Error('linked_dependency_index_unverified');
+  if(restore&&kind!=='leads')throw Error('restore_dependency_index_unverified');
+  tx.set(kind,id,{...r,deleted:!restore,version:r.version+1});return {ok:true,id};
+ });
+}
+
+// PRIVATE adapter. Inject Firestore SDK+db only in reviewed context, no live wiring.
+
+function manualAdapter({FB,db}){
+ const canonical=x=>JSON.stringify(Object.fromEntries(Object.entries(x).sort(([a],[b])=>a.localeCompare(b))));
+ const coll={leads:'serviceLeads',customers:'unickCustomers'};
+ return{async create({kind,requestId,patch}){
+  if(!coll[kind])throw Error('module_held');if(!/^[A-Za-z0-9_-]{20,100}$/.test(requestId))throw Error('invalid_request');
+  const d=validatePatch(kind,patch,{creating:true}),input=canonical(d);const field=kind==='leads'?'lead':'cust',idf=kind==='leads'?'leadNo':'custNo',prefix=kind==='leads'?'UL-':'UC-';
+  const id='manual_'+requestId,record=FB.doc(db,coll[kind],id),counter=FB.doc(db,'unickMeta','counters');
+  return FB.runTransaction(db,async t=>{
+   const old=await t.get(record);if(old.exists()){const x=old.data();if(x.requestId===requestId&&x.manualInput===input)return{ok:true,id,replayed:true};throw Error('request_conflict')}
+   if(kind==='leads'){t.set(record,{...d,leadNo:id,requestId,manualInput:input,source:'owner_manual',createdAt:FB.serverTimestamp(),version:1,deleted:false,status:d.status||'New leads',serviceStatus:d.serviceStatus||'New'});return{ok:true,id,replayed:false}}
+   const c=await t.get(counter);const raw=c.exists()?c.data():{};if(!c.exists()||!Number.isSafeInteger(raw[field])||raw[field]<0)throw Error('counter_invalid');
+   const no=raw[field]+1;
+   const row={...d,[idf]:prefix+(field==='lead'?String(no):String(no).padStart(3,'0')),requestId,manualInput:input,source:'owner_manual',createdAt:FB.serverTimestamp(),version:1,deleted:false,...(kind==='leads'?{status:d.status||'New leads',serviceStatus:d.serviceStatus||'New'}:{})};
+   t.set(counter,{[field]:no,[field==='lead'?'lastManualLeadId':'lastManualCustomerId']:id},{merge:true});t.set(record,row);return{ok:true,id,replayed:false};
+  });
+ },async update({kind,id,requestId,patch={},expectedVersion,deleted}){
+  const names={...coll,services:'unickServices'};if(!names[kind])throw Error('module_held');
+  if(!/^[A-Za-z0-9_-]{20,100}$/.test(requestId))throw Error('invalid_request');
+  if(deleted!==undefined&&kind!=='leads')throw Error('linked_dependency_index_unverified');
+  const d=validatePatch(kind,patch),input=canonical({...d,...(deleted===undefined?{}:{deleted})}),r=FB.doc(db,names[kind],id);
+  return FB.runTransaction(db,async t=>{
+   const sn=await t.get(r);if(!sn.exists())throw Error('not_found');const old=sn.data();
+   if(old.lastManualRequest===requestId){if(old.lastManualInput===input)return{ok:true,id,replayed:true};throw Error('request_conflict')}
+   const version=old.version===undefined?0:old.version;if(!Number.isSafeInteger(version)||version!==expectedVersion)throw Error('record_changed_reload');
+   const changes={...d,version:version+1,lastManualRequest:requestId,lastManualInput:input,updatedAt:FB.serverTimestamp(),updatedBy:'owner_manual',...(deleted===undefined?{}:{deleted})};
+   // Existing historical/financial/ID/source fields survive untouched. Last-change
+   // metadata is not an immutable audit history; UI does not claim full history.
+   t.update(r,changes);return{ok:true,id,replayed:false};
+  });
+ }};
+}
+
+
+// PRIVATE integration candidate. Never imported by deployed dashboard.
+
+function installManualDashboard({enabled=false,FB,db,ui}){
+ const adapter=manualAdapter({FB,db});let busy=false;
+ const editable={leads:['name','phone','email','status','serviceStatus','followUp','note'],customers:['name','phone','email','company','gstin','city','state','note'],services:['active']};
+ function scope(kind,action){if(!enabled)throw Error('manual_activation_held');if(!editable[kind])throw Error('module_held');if(action==='create'&&!['leads','customers'].includes(kind))throw Error('new_service_held');if(action==='trash'&&kind!=='leads')throw Error('linked_dependency_index_unverified')}
+ return{editable,async save({kind,id,values,version,requestId}){
+  scope(kind,id?'edit':'create');if(busy)throw Error('save_in_progress');busy=true;ui.pending(true);ui.status('Saving...');
+  try{const allow=id?editable[kind]:[...editable[kind],...(kind==='leads'?['requestedService']:[])];if(Object.keys(values).some(k=>!allow.includes(k)))throw Error('unexpected_field');const r=id?await adapter.update({kind,id,patch:values,expectedVersion:version??0,requestId}):await adapter.create({kind,patch:values,requestId});ui.status('Saved.');ui.close();return r}
+  catch(e){ui.status('Not confirmed saved: '+e.message+'. Keep this form and request ID; retry or reload after checking.');throw e}
+  finally{busy=false;ui.pending(false)}
+ },async trash({kind,id,version,restore=false,requestId}){scope(kind,'trash');if(busy)throw Error('save_in_progress');busy=true;ui.pending(true);try{const r=await adapter.update({kind,id,patch:{},expectedVersion:version??0,deleted:!restore,requestId});ui.status(restore?'Restored.':'Moved to Trash.');return r}catch(e){ui.status('Change not confirmed: '+e.message);throw e}finally{busy=false;ui.pending(false)}}};
+}
+
+const MANUAL_ENABLED=true;
+let manualController;
+async function getManualController(){if(!MANUAL_ENABLED)throw Error('Manual actions are not activated.');if(!manualController){manualController=installManualDashboard({enabled:MANUAL_ENABLED,FB,db:DB,ui:{pending(v){document.querySelectorAll('#fm button[value=ok]').forEach(b=>b.disabled=v)},status(t){const e=document.getElementById('manual-save-status');if(e)e.textContent=t;else alert(t)},close(){$('#dg').close()}}})}return manualController}
+const oldEdit=edit;
+edit=function(k,id){if(MODE==='demo')return oldEdit(k,id);if(!MANUAL_ENABLED)return alert('Manual actions are not activated.');if(!['leads','customers','services'].includes(k)||(!id&&k==='services'))return alert('This action remains held.');if(arguments.length>1&&!id)return alert('Select a record first');
+const row=id?D[k].find(x=>x.id===id):{};if(!row)return alert('Record not found. Reload first.');
+const allowed={leads:['name','phone','email','status','serviceStatus','followUp','note'],customers:['name','phone','email','company','gstin','city','state','note'],services:['active']}[k];if(!id&&k==='leads')allowed.push('requestedService');
+const requestId=crypto.randomUUID();const expected=row.version??0;
+$('#fm').innerHTML='<h3>'+(!id?'New':'Edit')+' - '+esc(M[k].t)+'</h3><p>Contact/work details only. Prices, received money, links and IDs stay unchanged.</p>'+M[k].f.filter(f=>allowed.includes(f[0])).map(([key,label,type,options])=>'<label>'+esc(label)+(type==='s'?'<select name="'+key+'">'+options.map(v=>'<option '+(row[key]===v?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select>':'<input name="'+key+'" type="'+(type==='d'?'date':'text')+'" value="'+esc(row[key]??'')+'" '+(key==='name'?'required':'')+'>')+'</label>').join('')+'<p id="manual-save-status" role="status"></p><div class="act2"><button value="x" formnovalidate>Cancel</button><button value="ok">Save</button></div>';
+$('#fm').onsubmit=async e=>{if(e.submitter?.value!=='ok')return;e.preventDefault();const values=Object.fromEntries(new FormData($('#fm')));try{await(await getManualController()).save({kind:k,id,values,version:expected,requestId})}catch(e){}};$('#dg').showModal();};
+const oldDel=del,oldRestore=restore;
+del=async function(k,id){if(MODE==='demo')return oldDel(k,id);if(!MANUAL_ENABLED||k!=='leads')return alert('This action remains held.');const r=D[k].find(x=>x.id===id);if(!r)return alert('Select a record first');if(!confirm('Move this lead to recoverable Trash? Money and linked records will not change.'))return;try{await(await getManualController()).trash({kind:k,id,version:r.version??0,requestId:crypto.randomUUID()})}catch(e){}};
+restore=async function(k,id){if(MODE==='demo')return oldRestore(k,id);if(!MANUAL_ENABLED||k!=='leads')return alert('This action remains held.');const r=D[k].find(x=>x.id===id);if(!r)return;try{await(await getManualController()).trash({kind:k,id,version:r.version??0,restore:true,requestId:crypto.randomUUID()})}catch(e){}};
+const oldReadOnly=applyReadOnlyUI;
+applyReadOnlyUI=function(root){oldReadOnly(root);if(!MANUAL_ENABLED||MODE==='demo')return;const win=root.closest('.win');if(!win||!['w-leads','w-customers','w-services','w-trash'].includes(win.id))return;root.querySelectorAll('button').forEach(el=>{const a=el.getAttribute('onclick')||'';const editMatch=a.match(/^edit\('?(leads|customers|services)'?,(.*)\)$/);let permit=false;if(/^edit\('leads'\)/.test(a)||/^edit\('customers'\)/.test(a))permit=true;if(editMatch&&!(editMatch[1]==='services'&&!editMatch[2]))permit=true;if(/^del\('leads',/.test(a)||/^restore\('leads',/.test(a))permit=true;if(permit){el.disabled=false;el.title='Contact/work details only; money stays unchanged'}})};
+</script><style>#dg{max-height:90dvh;overflow:auto}#fm .act2{position:sticky;bottom:0;background:#ece9d8;padding:8px}</style></body>
+               </html>
