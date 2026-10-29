@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#0a246a">
 <title>UNICK DIGITAL · Classic Management Dashboard</title>
 <style>
+.classic-icon{width:24px;height:24px;display:inline-block;vertical-align:middle}.bn i{font-style:normal}
+
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{display:flex;flex-direction:column;font:12px/1.4 Tahoma,"Segoe UI",Arial,sans-serif;background:#3a6ea5;color:#000;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
@@ -68,7 +70,7 @@ dialog label{display:block;margin-bottom:6px}dialog input,dialog select{display:
 .prn .ph img{height:56px}
 .prn .ph b{font-size:18px;color:#0a246a;letter-spacing:1px}
 .prn .pf{margin-top:12px;border-top:1px solid #0a246a;padding-top:4px;font-size:11px;color:#0a246a}
-</style>
+.readonly-note{background:#fff4c4;border:1px solid #876400;padding:8px;line-height:1.5}button:disabled{opacity:.55;cursor:not-allowed}a[aria-disabled=true]{opacity:.5;cursor:not-allowed}</style>
 </head>
 <body>
 <div id="menu"></div><div id="desk"></div><div id="status"></div>
@@ -89,6 +91,15 @@ const FY='01/04/2026 to 31/03/2027';
 let MODE='live', DB=null, AUTH=null, FB=null;
 let D={leads:[],services:[],customers:[],payments:[],staff:[],attendance:[],commissions:[]};           // working data (demo or live-mirrored)
 let ctr={lead:1000,svc:100};
+let OWNER_REVIEW_DEMO=false;
+
+// Private source-state repair. This candidate grants NO live write authority.
+const SOURCE_STATE=Object.fromEntries(Object.keys(D).map(k=>[k,{state:'loading',code:''}]));
+function sourceReady(k){return MODE==='demo'||SOURCE_STATE[k]?.state==='ready'}
+function sourceNotice(k){const r=SOURCE_STATE[k];return `<div role="alert" style="border:2px solid #9c1616;padding:10px;color:#8b1111;background:#fff3ef"><b>${r?.state==='denied'?'Records unavailable: permission denied':'Records not verified: '+(r?.state||'loading')}</b><br>No balance or empty-record claim can be made. Live changes are held. No records were changed.</div>`}
+function watchSource(k,c){SOURCE_STATE[k]={state:'loading',code:''};return FB.onSnapshot(FB.collection(DB,c),snap=>{D[k]=snap.docs.map(d=>({id:d.id,...d.data()}));SOURCE_STATE[k]={state:'ready',code:''};all()},err=>{D[k]=[];SOURCE_STATE[k]={state:err.code==='permission-denied'?'denied':'error',code:err.code||'unknown'};all()})}
+function requirePrivateMutation(){if(MODE!=='demo')throw new Error('Live changes held: source access and write workflows need separate review. No account, email, counter or business record changes allowed in this candidate.')}
+
 const SVC_SEED=[['GST registration',1299,1169],['PAN',649,584],['Export Import Code (IEC)',1949,1754],['Company registration',12999,11699],['Trademark',8449,7604],['FSSAI (food license)',1299,1169],['ISO certificate',6499,5849],['Digital Signature (DSC)',2599,2339],['Income Tax return',1299,1169],['GST return filing',1299,1169],['Trade license',2599,2339],['Shop & Establishment registration',1299,1169],['EPF registration',1299,1169],['ESI registration',1299,1169],['Professional Tax registration',1299,1169],['Partnership firm registration',3899,3509],['LLP registration',10399,9359],['Copyright',6499,5849],['TAN application',649,584],['Startup India (DPIIT)',2599,2339],['WhatsApp Automation',6499,5849],['AI Chat Agent',0,0],['AI Voice and Calling Agent',0,0],['AI Video and Reels Creation',0,0],['Business Website',0,0],['Management Software',0,0],['Android App',0,0],['GST and HSN Tools Setup',0,0]];
 function demoData(){D.leads=[
  {id:'d1',leadNo:'UL-1001',name:'Rahul Sharma',phone:'+91 98300 11111',email:'rahul.s@gmail.com',requestedService:'GST registration',paymentChoice:'full_enquiry',status:'New leads',followUp:today(),quotedAmount:899,receivedAmount:0,paymentStatus:'Not paid',note:'',source:'unick_site',createdAt:new Date().toISOString()},
@@ -122,8 +133,9 @@ const PAGETITLE={leads:'Leads Register',services:'Services & Fee List',customers
 // ---------- window manager ----------
 let z=10,nw=0;const sel={};
 function foc(e){document.querySelectorAll('.win').forEach(x=>x.classList.remove('act'));e.classList.add('act');e.style.zIndex=++z}
-function paint(e){if(e&&e.r)e.querySelector('.bd').innerHTML=e.r()}
-function all(){document.querySelectorAll('.win').forEach(paint);stat()}
+function paint(e){if(e&&e.r){const bd=e.querySelector('.bd');bd.innerHTML=e.r();applyReadOnlyUI(bd)}}
+function applyReadOnlyUI(root){if(MODE==='demo'||root.closest('#w-login'))return;root.querySelectorAll('button,select,input').forEach(el=>{const act=el.getAttribute('onclick')||el.getAttribute('onchange')||'';if(el.matches('select,input')||/edit\(|del\(|imp\(|approveStaff\(|rejectStaff\(|restore\(|purge\(|seedServices\(|genCommission\(|expdf\(|exfile\(|dlmod\(|bk\(/.test(act)){el.disabled=true;el.title='Held in read-only review: no data, account or email changes';}});root.querySelectorAll('[ondblclick]').forEach(el=>el.removeAttribute('ondblclick'));root.querySelectorAll('[onclick]').forEach(el=>{if(/run\('(gencom|backup|restore)'\)/.test(el.getAttribute('onclick'))){el.setAttribute('aria-disabled','true');el.setAttribute('title','Held in read-only review');if(el.tagName==='BUTTON')el.disabled=true;}})}
+function all(){document.querySelectorAll('.win').forEach(paint);if(MODE!=='demo')applyReadOnlyUI($('#menu'));stat()}
 function win(id,t,r,w){let e=document.getElementById(id);
 if(!e){e=document.createElement('div');e.id=id;e.className='win';e.r=r;e.style.cssText=`left:${24+(nw%8)*28}px;top:${10+(nw%8)*26}px;width:${w||700}px`;nw++;
 e.innerHTML=`<div class="tb"><span>${t}</span><span><b class="wm">_</b><b class="wx">×</b></span></div><div class="bd"></div>`;$('#desk').append(e);
@@ -131,11 +143,11 @@ e.querySelector('.wx').onclick=()=>e.remove();e.querySelector('.wm').onclick=()=
 const tb=e.querySelector('.tb');tb.onpointerdown=v=>{if(v.target.tagName=='B')return;tb.setPointerCapture(v.pointerId);const dx=v.clientX-e.offsetLeft,dy=v.clientY-e.offsetTop;tb.onpointermove=m=>{e.style.left=m.clientX-dx+'px';e.style.top=Math.max(0,m.clientY-dy)+'px'};tb.onpointerup=()=>{tb.onpointermove=null}};
 e.addEventListener('pointerdown',()=>foc(e));paint(e)}
 foc(e);return e}
-function stat(){const L=live('leads');const nw2=L.filter(l=>l.status=='New leads').length;
+function stat(){const demoBanner=document.getElementById('owner-review-demo');if(OWNER_REVIEW_DEMO&&!demoBanner){const note=document.createElement('div');note.id='owner-review-demo';note.style.cssText='background:#fff4c4;border-bottom:2px solid #876400;padding:7px 10px;font-weight:bold';note.textContent='PRIVATE OWNER PREVIEW - DEMO RECORDS ONLY. Not actual balances. Proposed read-only access; no changes or emails.';$('#menu').after(note)}if(MODE!=='demo'&&Object.keys(D).some(k=>!sourceReady(k))){$('#status').innerHTML='<span>UNICK: records not verified</span><span>Do not treat unavailable records as zero balances</span><span>Live changes held</span>';return;}const L=live('leads');const nw2=L.filter(l=>l.status=='New leads').length;
 const pend=L.reduce((s,l)=>s+Math.max((+l.quotedAmount||0)-(+l.receivedAmount||0),0),0);
 const fu=L.filter(l=>l.followUp==today()).length;
-$('#status').innerHTML=`${MODE=='demo'?'<span class="demo">DEMO DATA</span>':''}<span>${CO.n}</span><span>Period 1 · ${FY}</span><span>Leads ${L.length} (New ${nw2})</span><span>Follow-ups today ${fu}</span><span>Payments pending ${inr(pend)}</span>`}
-async function approveStaff(id){const r=(D.staff||[]).find(x=>x.id==id);if(!r)return;
+$('#status').innerHTML=`${MODE=='demo'?'<span class="demo">DEMO DATA</span>':''}${MODE!=='demo'?'<span>READ ONLY - changes held</span>':''}<span>${CO.n}</span><span>Period 1 · ${FY}</span><span>Leads ${L.length} (New ${nw2})</span><span>Follow-ups today ${fu}</span><span>Payments pending ${inr(pend)}</span>`}
+async function approveStaff(id){requirePrivateMutation();const r=(D.staff||[]).find(x=>x.id==id);if(!r)return;
 if(!confirm('Approve '+r.name+'? This creates their staff login, emails a set-password link, and assigns a Staff ID.'))return;
 try{
  const unsId=await nextNo('staff');
@@ -158,7 +170,7 @@ try{
  await commitSave('staff',id,{status:'approved',unsId:unsId,joinedAt:now,approvedAt:now,authUid:uid});
  alert('Approved '+r.name+' as '+unsId+'.'+mailNote+'\n\nOffer letter: pending email sender route - generate from the approved template when ready.');
 }catch(e){alert('Approve failed: '+e.message)}}
-async function genCommission(){const st=(D.staff||[]).filter(x=>x.status=='approved');
+async function genCommission(){requirePrivateMutation();const st=(D.staff||[]).filter(x=>x.status=='approved');
 if(!st.length)return alert('No approved staff yet.');
 const names=st.map((s,i)=>(i+1)+'. '+s.name+' ('+(s.unsId||'')+')').join('\n');
 const pick=prompt('Generate monthly commission draft (15% of payments received from their leads). Pick staff:\n'+names,'1');
@@ -170,17 +182,17 @@ const coll=pays.reduce((a,p)=>a+(+p.receivedAmount||+p.amount||0),0);
 const com=Math.round(coll*0.15*100)/100;
 if(!confirm('Staff: '+s.name+'\nMonth: '+month+'\nPayments found: '+pays.length+' (leads attributed: '+myLeads.length+')\nCollections: Rs.'+coll+'\nCommission 15%: Rs.'+com+'\n\nSave as DRAFT?'))return;
 try{await commitSave('commissions',null,{staffId:s.unsId||'',staffName:s.name,month:month,collections:coll,commission:com,status:'draft',paymentIds:pays.map(p=>p.payNo||p.id).join(','),createdAt:new Date().toISOString(),note:''});alert('Draft saved in Commission register.')}catch(e){alert('Save failed: '+e.message)}}
-async function rejectStaff(id){const r=(D.staff||[]).find(x=>x.id==id);if(!r)return;
+async function rejectStaff(id){requirePrivateMutation();const r=(D.staff||[]).find(x=>x.id==id);if(!r)return;
 const reason=prompt('Reject '+r.name+'? Reason (goes on record):','');
 if(reason===null)return;
 try{await commitSave('staff',id,{status:'rejected',rejectedAt:new Date().toISOString(),rejectReason:reason});}catch(e){alert('Reject failed: '+e.message)}}
 // ---------- list rendering ----------
 const custLabel=id=>{const c=D.customers.find(x=>x.id==id);return c?(c.custNo||'')+' '+c.name:''};
 function cell(f,r){const v=r[f[0]];if(f[2]=='m')return inr(v);if(f[0]=='paymentChoice'){const c=CHOICE.find(x=>x[0]==v);return esc(c?c[1]:v||'')}if(f[0]=='customerId')return esc(custLabel(v));return esc(v)}
-function listHtml(k){const m=M[k];let rows=[...live(k)];if(m.sort)rows.sort((a,b)=>a[m.sort]>b[m.sort]?(m.rev?-1:1):(m.rev?1:-1));const s=rows.find(r=>r.id==sel[k]);
-return tbr(k)+(m.banner?`<div style="background:#fff8e1;border:1px solid #d9b84a;padding:4px 8px;font-size:12px">${m.banner}</div>`:'')+`<div class="pl">${CO.n} · ${PAGETITLE[k]} · ${FY}</div><div class="tw"><table><tr><th>Edit / Delete</th>${m.f.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr class="${r.id==sel[k]?'sel':''}" onclick="pick('${k}','${r.id}')" ondblclick="edit('${k}','${r.id}')"><td style="white-space:nowrap" onclick="event.stopPropagation()">${k=='staff'&&r.status=='pending'?`<button title="Approve" style="color:#060;font-weight:700" onclick="approveStaff('${r.id}')">✔</button> <button title="Reject" style="color:#a00" onclick="rejectStaff('${r.id}')">✖</button> `:''}<button title="Edit" onclick="edit('${k}','${r.id}')">✎</button> <button title="Delete (goes to Trash)" onclick="del('${k}','${r.id}')">🗑</button></td>${m.f.map(f=>`<td>${f[0]=='serviceStatus'?`<select onclick="event.stopPropagation()" onchange="svcStat('${k}','${r.id}',this.value)">${f[3].map(o=>`<option ${(r.serviceStatus||'New')==o?'selected':''}>${o}</option>`).join('')}</select>`:cell(f,r)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${m.f.length+1}">No records yet. Click New.</td></tr>`}</table></div>${m.det&&s?m.det(s):''}`}
-function tbr(k,expK){const x=expK||k;return`<div class="tbr"><button onclick="edit('${k}')">➕ New</button><button onclick="edit('${k}',sel['${k}'])">✎ Edit</button><button onclick="del('${k}',sel['${k}'])">🗑 Delete</button><button onclick="imp('${k}')">⬆ Import</button><button onclick="expdf('${x}')">🖶 PDF</button><button onclick="exfile('${x}','csv')">⬇ CSV</button><button onclick="exfile('${x}','xlsx')">⬇ XLS</button><button onclick="dlmod('${x}')">💾 Download</button><button onclick="back()">↩ Back</button><button onclick="this.closest('.win').remove()">✖ Close</button></div>`}
-function tbrExp(k){return`<div class="tbr"><button onclick="expdf('${k}')">🖶 PDF</button><button onclick="exfile('${k}','csv')">⬇ CSV</button><button onclick="exfile('${k}','xlsx')">⬇ XLS</button><button onclick="dlmod('${k}')">💾 Download</button><button onclick="back()">↩ Back</button><button onclick="this.closest('.win').remove()">✖ Close</button></div>`}
+function listHtml(k){if(!sourceReady(k))return sourceNotice(k);const m=M[k];let rows=[...live(k)];if(m.sort)rows.sort((a,b)=>a[m.sort]>b[m.sort]?(m.rev?-1:1):(m.rev?1:-1));const s=rows.find(r=>r.id==sel[k]);
+return tbr(k)+(MODE!=='demo'?'<p class=readonly-note>Read-only review: New, Edit, Delete, Import, export and staff actions are held. Existing records stay unchanged.</p>':'')+(m.banner?`<div style="background:#fff8e1;border:1px solid #d9b84a;padding:4px 8px;font-size:12px">${MODE==='demo'?m.banner:(k==='payments'?'Read-only payment records. Online collection is not active here. Adding or changing received amounts is held.':m.banner)}</div>`:'')+`<div class="pl">${CO.n} · ${PAGETITLE[k]} · ${FY}</div><div class="tw"><table><tr><th>Edit / Delete</th>${m.f.map(f=>`<th>${f[1]}</th>`).join('')}</tr>${rows.map(r=>`<tr class="${r.id==sel[k]?'sel':''}" onclick="pick('${k}','${r.id}')" ondblclick="edit('${k}','${r.id}')"><td style="white-space:nowrap" onclick="event.stopPropagation()">${k=='staff'&&r.status=='pending'?`<button title="Approve" style="color:#060;font-weight:700" onclick="approveStaff('${r.id}')">OK</button> <button title="Reject" style="color:#a00" onclick="rejectStaff('${r.id}')">No</button> `:''}<button title="Edit" onclick="edit('${k}','${r.id}')">E</button> <button title="Delete (goes to Trash)" onclick="del('${k}','${r.id}')">X</button></td>${m.f.map(f=>`<td>${f[0]=='serviceStatus'?`<select onclick="event.stopPropagation()" onchange="svcStat('${k}','${r.id}',this.value)">${f[3].map(o=>`<option ${(r.serviceStatus||'New')==o?'selected':''}>${o}</option>`).join('')}</select>`:cell(f,r)}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${m.f.length+1}">${MODE==='demo'?'No records yet. Click New.':'This source returned no records. Read-only access; changes remain held.'}</td></tr>`}</table></div>${m.det&&s?m.det(s):''}`}
+function tbr(k,expK){const x=expK||k;return`<div class="tbr"><button onclick="edit('${k}')">+ New</button><button onclick="edit('${k}',sel['${k}'])">Edit</button><button onclick="del('${k}',sel['${k}'])">Delete</button><button onclick="imp('${k}')">Import</button><button onclick="expdf('${x}')">PDF</button><button onclick="exfile('${x}','csv')">CSV</button><button onclick="exfile('${x}','xlsx')">XLS</button><button onclick="dlmod('${x}')">Download</button><button onclick="back()">Back</button><button onclick="this.closest('.win').remove()">Close</button></div>`}
+function tbrExp(k){return`<div class="tbr"><button onclick="expdf('${k}')">PDF</button><button onclick="exfile('${k}','csv')">CSV</button><button onclick="exfile('${k}','xlsx')">XLS</button><button onclick="dlmod('${k}')">Download</button><button onclick="back()">Back</button><button onclick="this.closest('.win').remove()">Close</button></div>`}
 function pick(k,id){sel[k]=id;paint(document.getElementById('w-'+k))}
 function back(){document.querySelectorAll('.win').forEach(w=>w.remove());run('home')}
 // ---------- payments window ----------
@@ -191,7 +203,7 @@ function trashHtml(){const L=trash('leads'),S=trash('services');
 const sec=(t,rows,k)=>`<div class="pl">${t}</div><div class="tw" style="max-height:150px"><table><tr><th>ID</th><th>Name</th><th></th></tr>${rows.map(r=>`<tr><td>${esc(r.leadNo||r.svcNo||r.custNo||r.payNo||'-')}</td><td>${esc(r.name)}</td><td><button onclick="restore('${k}','${r.id}')">♻ Restore</button> <button onclick="purge('${k}','${r.id}')">✖ Delete forever</button></td></tr>`).join('')||'<tr><td colspan=3>Empty</td></tr>'}</table></div>`;
 const C=trash('customers'),Y=trash('payments');return tbrExp('trash')+sec('Deleted Leads',L,'leads')+sec('Deleted Services',S,'services')+sec('Deleted Customers',C,'customers')+sec('Deleted Payments',Y,'payments')}
 // ---------- edit dialog ----------
-function edit(k,id){if(arguments.length>1&&(id==null||id==='null'))return alert('Select a record first');
+function edit(k,id){if(MODE!=='demo'){alert('Live changes held for separate review.');return;}if(arguments.length>1&&(id==null||id==='null'))return alert('Select a record first');
 const m=M[k],r=id?D[k].find(x=>x.id==id):{};
 const svcOpts=live('services').map(s=>s.name);
 $('#fm').innerHTML=`<h3>${id?'Edit':'New'} · ${m.t}</h3>`+m.f.map(([key,lb,ty,o,ol],i)=>{if(id&&(m.ro||[]).includes(key))return`<label>${lb}<input name="${key}" readonly value="${esc(r[key]||'')}"></label>`;
@@ -206,29 +218,29 @@ const COLL={leads:'serviceLeads',services:'unickServices',customers:'unickCustom
 const IDF={leads:'leadNo',services:'svcNo',customers:'custNo',payments:'payNo',staff:'unsId',attendance:'attId',commissions:'comNo'};
 const PFX={leads:'UL-',services:'US-',customers:'UC-',payments:'UP-',staff:'UNS-',attendance:'UA-',commissions:'UCOM-'};
 const CTR={leads:'lead',services:'svc',customers:'cust',payments:'pay',staff:'staff',attendance:'att',commissions:'com'};
-async function commitSave(k,id,d){
+async function commitSave(k,id,d){requirePrivateMutation();
 if(MODE=='demo'){if(id)Object.assign(D[k].find(x=>x.id==id),d);else{const p=PFX[k]+(k=='leads'?++ctr.lead:String(++ctr[CTR[k]]).padStart(3,'0'));D[k].push({id:'n'+Date.now(),[IDF[k]]:p,createdAt:new Date().toISOString(),source:'classic_dashboard',status:k=='leads'?(d.status||'New leads'):undefined,...d})}all();return}
 try{
  if(id){await FB.updateDoc(FB.doc(DB,COLL[k],id),d)}
  else{const no=await nextNo(CTR[k]);const extra=k=='leads'?{company:'',age:'',gst:'',gender:'',statusHistory:[{stage:d.status||'New leads',at:new Date().toISOString(),by:'classic_dashboard'}],status:'New leads',serviceStatus:d.serviceStatus||'New'}:(k=='services'?{active:'Yes'}:{});
   await FB.addDoc(FB.collection(DB,COLL[k]),{source:'classic_dashboard',createdAt:new Date().toISOString(),[IDF[k]]:no,...extra,...d})}
  }catch(x){alert('Save failed: '+x.message)}}
-async function nextNo(which){const ref=FB.doc(DB,'unickMeta','counters');const no=await FB.runTransaction(DB,async t=>{const s=await t.get(ref);const v=((s.exists()?s.data()[which]:0)||(which=='lead'?1000:100))+1;t.set(ref,{[which]:v},{merge:true});return v});
+async function nextNo(which){requirePrivateMutation();const ref=FB.doc(DB,'unickMeta','counters');const no=await FB.runTransaction(DB,async t=>{const s=await t.get(ref);const v=((s.exists()?s.data()[which]:0)||(which=='lead'?1000:100))+1;t.set(ref,{[which]:v},{merge:true});return v});
 return which=='lead'?'UL-'+no:which=='svc'?'US-'+String(no).padStart(3,'0'):which=='pay'?'UP-'+String(no).padStart(3,'0'):which=='staff'?'UNS-'+String(no).padStart(4,'0'):'UC-'+String(no).padStart(3,'0')}
-async function svcStat(k,id,v){if(MODE=='demo'){D[k].find(x=>x.id==id).serviceStatus=v;all();return}try{await FB.updateDoc(FB.doc(DB,COLL[k],id),{serviceStatus:v})}catch(x){alert('Status save failed: '+x.message)}}
-async function del(k,id){if(!id||id==='null')return alert('Select a record first');if(!confirm('Delete this record? It goes to Trash and can be restored.'))return;
+async function svcStat(k,id,v){requirePrivateMutation();if(MODE=='demo'){D[k].find(x=>x.id==id).serviceStatus=v;all();return}try{await FB.updateDoc(FB.doc(DB,COLL[k],id),{serviceStatus:v})}catch(x){alert('Status save failed: '+x.message)}}
+async function del(k,id){requirePrivateMutation();if(!id||id==='null')return alert('Select a record first');if(!confirm('Delete this record? It goes to Trash and can be restored.'))return;
 if(MODE=='demo'){D[k].find(x=>x.id==id).deleted=true;all();return}
 try{await FB.updateDoc(FB.doc(DB,COLL[k],id),{deleted:true})}catch(x){alert('Delete failed: '+x.message)}}
-async function restore(k,id){if(MODE=='demo'){D[k].find(x=>x.id==id).deleted=false;all();return}
+async function restore(k,id){requirePrivateMutation();if(MODE=='demo'){D[k].find(x=>x.id==id).deleted=false;all();return}
 try{await FB.updateDoc(FB.doc(DB,COLL[k],id),{deleted:false})}catch(x){alert('Restore failed: '+x.message)}}
-async function purge(k,id){if(!confirm('Delete forever? This cannot be undone.'))return;
+async function purge(k,id){requirePrivateMutation();if(!confirm('Delete forever? This cannot be undone.'))return;
 if(MODE=='demo'){D[k]=D[k].filter(x=>x.id!=id);all();return}
 try{await FB.deleteDoc(FB.doc(DB,COLL[k],id))}catch(x){alert('Delete failed: '+x.message)}}
 // ---------- import ----------
 async function loadXLSX(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Could not load Excel library (internet needed)'));document.head.append(s)})}
 async function loadPDF(){if(window.pdfjsLib)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';s.onload=res;s.onerror=()=>rej(new Error('Could not load PDF library (internet needed)'));document.head.append(s)});pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}
 let impK=null;
-function imp(k){impK=k;$('#if').value='';$('#if').click()}
+function imp(k){if(MODE!=='demo'){alert('Live changes held for separate review.');return;}impK=k;$('#if').value='';$('#if').click()}
 $('#if').onchange=async e=>{const f=e.target.files[0];if(!f)return;let rows=[];
 try{
  if(/\.pdf$/i.test(f.name)){await loadPDF();const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;let txt='';for(let p=1;p<=pdf.numPages;p++){const pg=await pdf.getPage(p);const tc=await pg.getTextContent();txt+=tc.items.map(i=>i.str).join(' ')+'\n'}
@@ -237,13 +249,17 @@ try{
  if(!rows.length)return alert('No rows found in that file.');
 }catch(x){return alert('Import failed: '+x.message)}
 showDraft(impK,rows)};
+// UNICK private import validator. Never silently turns negative/refund into income.
+function importMoney(value){if(typeof value==='number'){if(!Number.isFinite(value)||value<0)throw Error('Review amount');const n=Math.round(value*100);if(!Number.isSafeInteger(n)||Math.abs(value*100-n)>1e-6)throw Error('Review precision');return n}if(typeof value!=='string')throw Error('Review amount');const s=value.trim().replace(/^(?:₹|Rs\.?|INR)\s*/i,'');if(!/^(?:\d+|\d{1,3}(?:,\d{2})*,\d{3}|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/.test(s))throw Error('Review amount');return importMoney(Number(s.replaceAll(',',''))/1)}
+
 const ALIAS={leads:{name:['name','customer','client'],phone:['phone','mobile','contact'],email:['email','e-mail'],requestedService:['service','requested service'],paymentChoice:['payment choice','choice'],status:['status'],followUp:['follow-up','followup','follow up','date'],quotedAmount:['quoted','quoted ₹','amount'],receivedAmount:['received','received ₹','paid'],paymentStatus:['payment status'],note:['note','notes','remarks']},services:{name:['service','name'],full:['full fee','full','fee'],offer:['offer fee','offer','discounted'],active:['active']},customers:{name:['name','customer','client'],phone:['phone','mobile','contact'],email:['email','e-mail'],company:['company','firm'],gstin:['gstin','gst'],city:['city'],state:['state'],note:['note','notes','remarks']},payments:{date:['date'],name:['received from','name','payer','customer'],service:['service','for service'],amount:['amount','amount ₹','amt','paid'],mode:['mode','payment mode'],type:['type'],status:['status'],reference:['reference','txn','txn no','utr'],note:['note','notes','remarks']}};
 function showDraft(k,rows){const keys=Object.keys(ALIAS[k]);let head=rows[0].map(h=>String(h).toLowerCase().trim());
 const hasHead=head.some(h=>keys.some(key=>ALIAS[k][key].includes(h)));const map=keys.map(key=>hasHead?head.indexOf(ALIAS[k][key].find(a=>head.includes(a))??''):-1);
 const dataRows=hasHead?rows.slice(1):rows;
 $('#fi').innerHTML=`<h3>Import review · ${M[k].t} (${dataRows.length} rows)</h3><div class="fl">Column match: ${keys.map((key,i)=>`${key} ← ${map[i]>=0?'col '+(map[i]+1):'not found'}`).join(' · ')}</div><div class="tw" style="max-height:220px"><table><tr><th></th>${keys.map(key=>`<th>${key}</th>`).join('')}</tr>${dataRows.slice(0,200).map((r,ri)=>{const cells=keys.map((key,ki)=>map[ki]>=0?r[map[ki]]:'');const bad=!String(cells[0]||'').trim();return`<tr><td><input type="checkbox" ${bad?'':'checked'} data-ri="${ri}"></td>${cells.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`}).join('')}</table></div><div class="act2"><button value="x" formnovalidate>Cancel</button><button value="ok">Import checked rows</button></div>`;
-$('#fi').onsubmit=async e=>{if(e.submitter.value!='ok')return;const checked=[...$('#fi').querySelectorAll('input[type=checkbox]:checked')].map(c=>+c.dataset.ri);
-for(const ri of checked){const r=dataRows[ri];const d={};keys.forEach((key,ki)=>{if(map[ki]>=0){let v=r[map[ki]];if(['quotedAmount','receivedAmount','full','offer','amount'].includes(key))v=+String(v).replace(/[^\d.]/g,'')||0;if(key=='paymentChoice')v=/advance|30%/i.test(v)?'advance_30_percent_enquiry':'full_enquiry';d[key]=v}});
+$('#fi').onsubmit=async e=>{if(MODE!=='demo'){e.preventDefault();alert('Live import held for separate review.');return;}if(e.submitter.value!='ok')return;const checked=[...$('#fi').querySelectorAll('input[type=checkbox]:checked')].map(c=>+c.dataset.ri);
+try { for(const ri of checked){const r=dataRows[ri];for(let ki=0;ki<keys.length;ki++){if(map[ki]>=0&&['quotedAmount','receivedAmount','full','offer','amount'].includes(keys[ki]))importMoney(r[map[ki]]);}} }catch(error){e.preventDefault();let note=$('#fi').querySelector('[data-import-error]');if(!note){note=document.createElement('p');note.dataset.importError='true';note.setAttribute('role','alert');note.style.cssText='color:#9c1616;font-weight:bold';$('#fi').prepend(note)}note.textContent='Import stopped before saving: '+error.message+'. Check negative/refund, blank or malformed money cells. No selected rows were imported.';return;}
+for(const ri of checked){const r=dataRows[ri];const d={};keys.forEach((key,ki)=>{if(map[ki]>=0){let v=r[map[ki]];if(['quotedAmount','receivedAmount','full','offer','amount'].includes(key))v=importMoney(v)/100;if(key=='paymentChoice')v=/advance|30%/i.test(v)?'advance_30_percent_enquiry':'full_enquiry';d[key]=v}});
  if(MODE=='demo'){const p=PFX[k]+(k=='leads'?++ctr.lead:String(++ctr[CTR[k]]).padStart(3,'0'));D[k].push({id:'i'+Date.now()+ri,[IDF[k]]:p,createdAt:new Date().toISOString(),source:'import',status:d.status||(k=='leads'?'New leads':undefined),...d})}
  else{try{const no=await nextNo(CTR[k]);const extra=k=='leads'?{company:'',age:'',gst:'',gender:'',consent:true,statusHistory:[{stage:d.status||'New leads',at:new Date().toISOString(),by:'import'}],status:'New leads'}:(k=='services'?{active:'Yes'}:{});
   await FB.addDoc(FB.collection(DB,COLL[k]),{source:'import',createdAt:new Date().toISOString(),[IDF[k]]:no,...extra,...d})}catch(x){alert('Row '+(ri+1)+' failed: '+x.message)}}
@@ -260,37 +276,37 @@ if(k=='rbsv'){const m={};live('leads').forEach(l=>{const sv=l.requestedService||
 if(k=='rps'){const L=live('leads');let q=0,r2=0;const bySt={};L.forEach(l=>{q+=+l.quotedAmount||0;r2+=+l.receivedAmount||0;const st2=l.paymentStatus||'Not paid';bySt[st2]=bySt[st2]||{n:0,r:0};bySt[st2].n++;bySt[st2].r+=+l.receivedAmount||0});return{title:'Payments Summary',aoa:[['Payment status','Leads','Received ₹'],...Object.entries(bySt).map(([a,v])=>[a,v.n,inr(v.r)]),['Total quoted','',inr(q)],['Total received','',inr(r2)],['Pending','',inr(q-r2)]]}}}
 const tbl=aoa=>`<table><tr>${aoa[0].map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${aoa.slice(1).map((r,i,arr)=>{const tot=/^(Total|Pending)/.test(String(r[0]))&&i>=arr.length-3;return`<tr${tot?' class="tot"':''}>${r.map((c,ci)=>`<td${typeof c=='number'?' class=r':''}>${esc(c)}</td>`).join('')}</tr>`}).join('')}</table>`;
 function lhAoa(title,aoa){return[[CO.n],['GSTIN '+CO.g+' · '+CO.p+' · '+CO.e],[title+' · '+FY],[],...aoa]}
-async function exfile(k,kind){try{await loadXLSX()}catch(x){return alert(x.message)}
+async function exfile(k,kind){if(MODE!=='demo'){alert('Export held in read-only mode.');return;}try{await loadXLSX()}catch(x){return alert(x.message)}
 const t=aoaFor(k);const ws=XLSX.utils.aoa_to_sheet(lhAoa(t.title,t.aoa));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,t.title.slice(0,28));XLSX.writeFile(wb,`unick-${k}-${today()}.${kind=='csv'?'csv':'xlsx'}`,{bookType:kind})}
-function expdf(k){const t=aoaFor(k);printTable(t.title,t.aoa)}
+function expdf(k){if(MODE!=='demo'){alert('Export held in read-only mode.');return;}const t=aoaFor(k);printTable(t.title,t.aoa)}
 function printTable(title,aoa){$('#prn').innerHTML=`<div class="ph"><img src="${LOGO}"><div><b>${CO.n}</b><br>GSTIN ${CO.g} · ${CO.p} · ${CO.e}</div></div><b>${title}</b> · ${FY}<br><br><table><tr>${aoa[0].map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${aoa.slice(1).map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table><div class="pf">Generated on ${new Date().toLocaleString('en-IN')} · ${CO.n} · GSTIN ${CO.g} · ${CO.p}</div>`;window.print()}
-function dlmod(k){const data=M[k]?live(k):(k=='trash'?{leads:trash('leads'),services:trash('services'),customers:trash('customers')}:aoaFor(k));const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));a.download=`unick-${k}-${today()}.json`;a.click()}
-function bk(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='unick-classic-backup-'+today()+'.json';a.click()}
+function dlmod(k){if(MODE!=='demo'){alert('Export held in read-only mode.');return;}const data=M[k]?live(k):(k=='trash'?{leads:trash('leads'),services:trash('services'),customers:trash('customers')}:aoaFor(k));const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));a.download=`unick-${k}-${today()}.json`;a.click()}
+function bk(){if(MODE!=='demo'){alert('Export held in read-only mode.');return;}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(D)],{type:'application/json'}));a.download='unick-classic-backup-'+today()+'.json';a.click()}
 $('#rf').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>{try{const d=JSON.parse(t);if(MODE=='demo'){D=d;all()}else alert('Restore into live data is not automatic - use Import per module.')}catch(x){alert('Invalid backup file')}})};
 // ---------- reports ----------
 const rep=(t,id,k,w)=>win(id,t,()=>tbrExp(k)+`<div class="pl">${CO.n} · ${t} · ${FY}</div><div class="tw" style="max-height:420px">${tbl(aoaFor(k).aoa)}</div>`,w||520);
 // ---------- home ----------
-function homeHtml(){const L=live('leads');const pend=L.reduce((s,l)=>s+Math.max((+l.quotedAmount||0)-(+l.receivedAmount||0),0),0);
+function homeHtml(){if(MODE!=='demo'&&Object.keys(D).some(k=>!sourceReady(k)))return '<h2>UNICK management: source check</h2>'+Object.keys(D).map(k=>`<h3>${esc(M[k]?.t||k)}</h3>`+(sourceReady(k)?'<p>Source loaded. Live changes held.</p>':sourceNotice(k))).join('');const L=live('leads');const pend=L.reduce((s,l)=>s+Math.max((+l.quotedAmount||0)-(+l.receivedAmount||0),0),0);
 const g=(t,a)=>`<fieldset><legend>${t}</legend><div class="grid">${a.map(([i,l,k])=>`<button class="bn" onclick="run('${k}')"><i>${i}</i>${l}</button>`).join('')}</div></fieldset>`;
 return`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b><br>Classic Management Dashboard · GST ${CO.g}</div></div>`
-+`<div class="sum"><div>Total leads<b>${L.length}</b></div><div>New leads<b>${L.filter(l=>l.status=='New leads').length}</b></div><div>Follow-ups today<b>${L.filter(l=>l.followUp==today()).length}</b></div><div>Payments pending<b>${inr(pend)}</b></div><div>Received<b>${inr(L.reduce((s,l)=>s+(+l.receivedAmount||0),0))}</b></div></div>`
-+g('Manage',[['🎯','Leads (Enquiries)','leads'],['👔','Staff','staff'],['🕒','Attendance','attendance'],['💼','Commission','commissions'],['🧮','New commission draft','gencom'],['👥','Customers','customers'],['🛠️','Services & Fees','services'],['🧾','Payment Records','payments'],['💰','Payments & Enquiries','pay'],['🗑','Trash','trash']])
-+g('Reports',[['📊','Leads by Status','rbs'],['📈','Enquiries by Service','rbsv'],['💵','Payments Summary','rps']])
-+g('Data',[['💾','Backup data','backup'],['⬆','Restore backup','restore']])}
++(MODE!=='demo'?'<p class=readonly-note><b>Read-only review.</b> View existing lists and reports. Edits, import, service seeding, staff accounts/emails and exports are held pending separate review.</p>':'')+`<div class="sum"><div>Total leads<b>${L.length}</b></div><div>New leads<b>${L.filter(l=>l.status=='New leads').length}</b></div><div>Follow-ups today<b>${L.filter(l=>l.followUp==today()).length}</b></div><div>Payments pending<b>${inr(pend)}</b></div><div>Received<b>${inr(L.reduce((s,l)=>s+(+l.receivedAmount||0),0))}</b></div></div>`
++g('Manage',[['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>L</text></svg>','Leads (Enquiries)','leads'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>S</text></svg>','Staff','staff'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>A</text></svg>','Attendance','attendance'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>C</text></svg>','Commission','commissions'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>+</text></svg>','New commission draft','gencom'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>C</text></svg>','Customers','customers'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>F</text></svg>','Services & Fees','services'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>P</text></svg>','Payment Records','payments'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>P</text></svg>','Payments & Enquiries','pay'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>X</text></svg>','Trash','trash']])
++g('Reports',[['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>R</text></svg>','Leads by Status','rbs'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>R</text></svg>','Enquiries by Service','rbsv'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>R</text></svg>','Payments Summary','rps']])
++g('Data',[['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>B</text></svg>','Backup data','backup'],['<svg class=classic-icon viewBox=0,0,24,24 aria-hidden=true><rect x=2 y=2 width=20 height=20 rx=1 fill=none stroke=currentColor></rect><text x=12 y=17 text-anchor=middle font-size=15 font-family=Arial fill=currentColor>I</text></svg>','Restore backup','restore']])}
 // ---------- seed (live, on explicit click) ----------
-async function seedServices(){if(MODE=='demo')return alert('Demo mode - services already loaded.');if(!confirm('Add the 28 website services with current fees to the dashboard? Do this once.'))return;
+async function seedServices(){requirePrivateMutation();if(MODE=='demo')return alert('Demo mode - services already loaded.');if(!confirm('Add the 28 website services with current fees to the dashboard? Do this once.'))return;
 try{for(const s of SVC_SEED){const no=await nextNo('svc');await FB.addDoc(FB.collection(DB,'unickServices'),{svcNo:no,name:s[0],full:s[1],offer:s[2],active:'Yes'})}alert('Services added.')}catch(x){alert('Seed failed: '+x.message)}}
 // ---------- menu ----------
 const MENU=[['File',[['Backup data','backup'],['Restore data','restore'],['Print','print']]],['Sales',[['Leads (Website Enquiries)','leads'],['Staff','staff'],['Attendance','attendance'],['Commission','commissions'],['Customers','customers'],['Services & Fees','services'],['Payment Records','payments'],['Payments & Enquiries','pay'],['Trash','trash']]],['Reports',[['Leads by Status','rbs'],['Enquiries by Service','rbsv'],['Payments Summary','rps']]],['Window',[['Home','home'],['Close all','closeall']]],['Help',[['About','about']]]];
 $('#menu').innerHTML=MENU.map(([t,it])=>`<div class="mi" onclick="this.classList.toggle('o')">${t}<div class="dd">${it.map(([l,k])=>`<a onclick="run('${k}')">${l}</a>`).join('')}</div></div>`).join('');
 document.addEventListener('click',e=>{if(!e.target.closest('.mi'))document.querySelectorAll('.mi.o').forEach(x=>x.classList.remove('o'))});
-function run(k){document.querySelectorAll('.mi.o').forEach(x=>x.classList.remove('o'));
+function run(k){if(MODE!=='demo'&&k!=='home'&&Object.keys(D).some(k=>!sourceReady(k))){run('home');return;}if(MODE!=='demo'&&['backup','restore','gencom'].includes(k)){alert('Live export/restore/commission actions held until source and authority review.');return;}document.querySelectorAll('.mi.o').forEach(x=>x.classList.remove('o'));
 if(M[k])return win('w-'+k,M[k].t,()=>listHtml(k),k=='leads'?Math.min(1140,innerWidth-20):(k=='payments'?Math.min(1060,innerWidth-20):Math.min(760,innerWidth-20)));
 const P={home:()=>win('w-home','Home · '+CO.n,homeHtml,640),
 pay:()=>win('w-pay','Payments & Enquiries',payHtml,860),
 trash:()=>win('w-trash','Trash (recoverable)',trashHtml,560),
 rbs:()=>rep('Leads by Status','w-rbs','rbs',420),rbsv:()=>rep('Enquiries by Service','w-rbsv','rbsv',520),rps:()=>rep('Payments Summary','w-rps','rps',480),
-about:()=>win('w-about','About',()=>`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b></div></div>GST Reg. ${CO.g}<br>📞 ${CO.p} · ✉ ${CO.e}<br><br>Classic Management Dashboard v1.0<br>Mode: ${MODE=='demo'?'DEMO (sample data, nothing is saved)':'LIVE (synced with website database)'}`,460),
+about:()=>win('w-about','About',()=>`<div class="hd"><img src="${LOGO}"><div><b>${CO.n}</b></div></div>GST Reg. ${CO.g}<br>📞 ${CO.p} · ✉ ${CO.e}<br><br>Classic Management Dashboard v1.0<br>Mode: ${MODE=='demo'?'DEMO (sample data, nothing is saved)':'READ ONLY (verified sources only; changes held)'}`,460),
 backup:bk,restore:()=>$('#rf').click(),print:()=>window.print(),closeall:()=>document.querySelectorAll('.win').forEach(w=>w.remove())};
 P[k]&&P[k]()}
 // ---------- login / live mode ----------
@@ -300,13 +316,7 @@ try{if(!FB){const[a,f,au]=await Promise.all([import('https://www.gstatic.com/fir
 const app=a.initializeApp({apiKey:'AIzaSyANRNCASxjGE-IZSLdCws_6W4VpjemO1aI',authDomain:'udecs-store.firebaseapp.com',projectId:'udecs-store',appId:'1:859203239571:web:e541cc2e68f880efa41766'},'unick-dash');
 FB={collection:f.collection,doc:f.doc,setDoc:f.setDoc,addDoc:f.addDoc,updateDoc:f.updateDoc,deleteDoc:f.deleteDoc,onSnapshot:f.onSnapshot,runTransaction:f.runTransaction};DB=f.getFirestore(app);AUTH=au.getAuth(app);FB.signIn=au.signInWithEmailAndPassword}
 await FB.signIn(AUTH,em,pw);MODE='live';$('#w-login')&&$('#w-login').remove();
-FB.onSnapshot(FB.collection(DB,'serviceLeads'),s=>{D.leads=s.docs.map(d=>({id:d.id,...d.data()}));all()});
-FB.onSnapshot(FB.collection(DB,'unickServices'),s=>{D.services=s.docs.map(d=>({id:d.id,...d.data()}));if(!s.size)setTimeout(()=>{if(confirm('No services in dashboard yet. Add the 28 website services now?'))seedServices()},600);all()});
-FB.onSnapshot(FB.collection(DB,'unickCustomers'),s=>{D.customers=s.docs.map(d=>({id:d.id,...d.data()}));all()});
-FB.onSnapshot(FB.collection(DB,'unickPayments'),s=>{D.payments=s.docs.map(d=>({id:d.id,...d.data()}));all()});
-FB.onSnapshot(FB.collection(DB,'unickStaff'),s=>{D.staff=s.docs.map(d=>({id:d.id,...d.data()}));all()});
-FB.onSnapshot(FB.collection(DB,'unickAttendance'),s=>{D.attendance=s.docs.map(d=>({id:d.id,...d.data()}));all()});
-FB.onSnapshot(FB.collection(DB,'unickCommissions'),s=>{D.commissions=s.docs.map(d=>({id:d.id,...d.data()}));all()});
+Object.entries(COLL).forEach(([k,c])=>watchSource(k,c));
 run('home')}catch(x){$('#lerr').textContent=x.message}}
 function demo(){MODE='demo';demoData();const e=$('#w-login');e&&e.remove();run('home');stat()}
 // ---------- boot ----------
