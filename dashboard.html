@@ -70,7 +70,30 @@ dialog label{display:block;margin-bottom:6px}dialog input,dialog select{display:
 .prn .ph img{height:56px}
 .prn .ph b{font-size:18px;color:#0a246a;letter-spacing:1px}
 .prn .pf{margin-top:12px;border-top:1px solid #0a246a;padding-top:4px;font-size:11px;color:#0a246a}
-.readonly-note{background:#fff4c4;border:1px solid #876400;padding:8px;line-height:1.5}button:disabled{opacity:.55;cursor:not-allowed}a[aria-disabled=true]{opacity:.5;cursor:not-allowed}</style>
+.readonly-note{background:#fff4c4;border:1px solid #876400;padding:8px;line-height:1.5}button:disabled{opacity:.55;cursor:not-allowed}a[aria-disabled=true]{opacity:.5;cursor:not-allowed}
+/* Compact layout also covers touch browsers requesting a wide desktop viewport. */
+html.compact body{font-size:clamp(14px,3.6vw,36px)}
+html.compact #menu{padding-right:0}
+html.compact .mi{padding:.4em .55em}
+html.compact #desk{min-height:65vh}
+html.compact .win{left:0!important;top:0!important;width:100%!important;max-height:100%;box-shadow:none}
+html.compact .bd{padding:.65em}
+html.compact .hd{flex-wrap:wrap;gap:.5em}
+html.compact .hd img{height:2.8em;max-width:26%;object-fit:contain}
+html.compact .hd b{font-size:1.08em;letter-spacing:.04em}
+html.compact .grid,html.compact .sum{grid-template-columns:repeat(2,minmax(0,1fr));gap:.45em}
+html.compact .sum b{font-size:1.18em}
+html.compact .bn{padding:.8em .25em;min-height:3.8em}
+html.compact .bn i{font-size:1.25em}
+html.compact .classic-icon{width:1.65em;height:1.65em}
+html.compact .tb{padding:.4em}
+html.compact .tb b{width:1.4em;height:1.4em;line-height:1.1em}
+html.compact #status{font-size:.75em;gap:.25em}
+html.compact .readonly-note{padding:.6em}
+html.compact .tw{max-height:50vh}
+html.compact fieldset{padding:.5em}
+#layoutToggle{margin-left:auto;white-space:nowrap}
+</style>
 </head>
 <body>
 <div id="menu"></div><div id="desk"></div><div id="status"></div>
@@ -325,5 +348,15 @@ if(h.startsWith('demo')){demo();const w=h.split('=')[1];if(w&&w!=='home')run(w==
 else loginWin();
 stat();
 </script>
-</body>
+<script>
+(function(){
+ const q=new URLSearchParams(location.search);const saved=localStorage.getItem('unick-layout');
+ const touch=navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;
+ const auto=touch&&Math.min(screen.width,screen.height)<=1100;
+ let compact=q.get('layout')==='compact'||(q.get('layout')!=='desktop'&&(saved==='compact'||(!saved&&auto)));
+ function apply(){document.documentElement.classList.toggle('compact',compact);const b=document.getElementById('layoutToggle');if(b)b.textContent=compact?'Desktop view':'Mobile view'}
+ function install(){const menu=document.getElementById('menu');if(!menu||document.getElementById('layoutToggle'))return;const b=document.createElement('button');b.id='layoutToggle';b.type='button';b.onclick=()=>{compact=!compact;localStorage.setItem('unick-layout',compact?'compact':'desktop');apply()};menu.append(b);apply()}
+ new MutationObserver(install).observe(document.getElementById('menu'),{childList:true});install();apply();
+})();
+</script></body>
 </html>
